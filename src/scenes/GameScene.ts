@@ -17,6 +17,7 @@ export const WORLD_HEIGHT = 2400;
  * Escena principal de "Evolución en el Manglar".
  * Integra nivel de manglar vertical por estratos, estética enriquecida estilo Kirby,
  * soporte de control universal (Teclado Phaser + DOM listeners + Clic/Touch), HUD dinámico,
+ * minimapa / altímetro vertical de estratos en tiempo real,
  * soporte multinivel con depredadores, habilidades activas por fase (Shift / Clic derecho),
  * sintetizador procedural Web Audio API y sistema global de partículas.
  */
@@ -45,6 +46,14 @@ export class GameScene extends Phaser.Scene {
   private abilityBadgeBg!: Phaser.GameObjects.Graphics;
   private abilityBarFill!: Phaser.GameObjects.Rectangle;
   private abilityText!: Phaser.GameObjects.Text;
+
+  // Minimapa / Altímetro Vertical de Estratos
+  private minimapStaticGfx!: Phaser.GameObjects.Graphics;
+  private minimapDynamicGfx!: Phaser.GameObjects.Graphics;
+  private readonly MINIMAP_X: number = 1280 - 28;
+  private readonly MINIMAP_Y: number = 100;
+  private readonly MINIMAP_W: number = 14;
+  private readonly MINIMAP_H: number = 280;
 
   // Seguimiento vertical de cámara
   private cameraY: number = 0;
@@ -131,8 +140,9 @@ export class GameScene extends Phaser.Scene {
     // 10. REGISTRAR TODAS LAS FÍSICAS Y COLISIONES (con todos los objetos ya instanciados)
     this.setupPhysicsCollisions();
 
-    // 11. Capa de Presentación / HUD
+    // 11. Capa de Presentación / HUD y Minimapa Vertical
     this.createHUD();
+    this.createMinimap();
     this.bindDomainEvents();
 
     // Limpieza al cerrar escena
@@ -661,6 +671,104 @@ export class GameScene extends Phaser.Scene {
     }).setScrollFactor(0);
   }
 
+  /**
+   * Crea el minimapa / altímetro vertical de estratos (2400px escalados a 280px) en el HUD derecho.
+   */
+  private createMinimap(): void {
+    this.minimapStaticGfx = this.add.graphics().setScrollFactor(0).setDepth(500);
+    this.minimapDynamicGfx = this.add.graphics().setScrollFactor(0).setDepth(501);
+
+    const x = this.MINIMAP_X;
+    const y = this.MINIMAP_Y;
+    const w = this.MINIMAP_W;
+    const h = this.MINIMAP_H;
+
+    // Fondo y marco del altímetro
+    this.minimapStaticGfx.fillStyle(0x05140d, 0.88);
+    this.minimapStaticGfx.fillRoundedRect(x - 5, y - 5, w + 10, h + 10, 8);
+    this.minimapStaticGfx.lineStyle(2, 0x52b788, 0.85);
+    this.minimapStaticGfx.strokeRoundedRect(x - 5, y - 5, w + 10, h + 10, 8);
+
+    // Estrato 1: Dosel Aéreo (0 a 800) - Celeste / verde claro traslúcido
+    const h1 = (800 / WORLD_HEIGHT) * h;
+    this.minimapStaticGfx.fillStyle(0x74c69d, 0.65);
+    this.minimapStaticGfx.fillRect(x, y, w, h1);
+
+    // Estrato 2: Suelo del Manglar (800 a 1550) - Verde esmeralda / marrón traslúcido
+    const h2 = ((1550 - 800) / WORLD_HEIGHT) * h;
+    this.minimapStaticGfx.fillStyle(0x2d6a4f, 0.7);
+    this.minimapStaticGfx.fillRect(x, y + h1, w, h2);
+
+    // Estrato 3: Mundo Acuático (1550 a 2400) - Azul profundo traslúcido
+    const h3 = ((2400 - 1550) / WORLD_HEIGHT) * h;
+    this.minimapStaticGfx.fillStyle(0x0077b6, 0.75);
+    this.minimapStaticGfx.fillRect(x, y + h1 + h2, w, h3);
+
+    // Separadores de estratos sutiles
+    this.minimapStaticGfx.lineStyle(1.2, 0xd8f3dc, 0.6);
+    this.minimapStaticGfx.lineBetween(x - 3, y + h1, x + w + 3, y + h1);
+    this.minimapStaticGfx.lineBetween(x - 3, y + h1 + h2, x + w + 3, y + h1 + h2);
+
+    // Etiquetas sutiles de referencia
+    const labelStyle = { fontFamily: 'sans-serif', fontSize: '10px', color: '#95d5b2' };
+    this.add.text(x - 32, y + 36, 'Dosel', labelStyle).setScrollFactor(0).setDepth(500);
+    this.add.text(x - 32, y + h1 + 36, 'Suelo', labelStyle).setScrollFactor(0).setDepth(500);
+    this.add.text(x - 30, y + h1 + h2 + 40, 'Agua', labelStyle).setScrollFactor(0).setDepth(500);
+  }
+
+  /**
+   * Actualiza los marcadores en tiempo real dentro del altímetro (Jugador + Depredadores/Jefe).
+   */
+  private updateMinimap(): void {
+    if (!this.minimapDynamicGfx || !this.player) return;
+    this.minimapDynamicGfx.clear();
+
+    const x = this.MINIMAP_X;
+    const y = this.MINIMAP_Y;
+    const w = this.MINIMAP_W;
+    const h = this.MINIMAP_H;
+
+    // En Nivel 2: Puntos rojos para depredadores patrullando y Jefe Final
+    if (this.currentLevel === 2) {
+      this.predatorGroup.children.iterate((child) => {
+        const pred = child as any;
+        if (pred && pred.active) {
+          const ratio = Phaser.Math.Clamp(pred.y / WORLD_HEIGHT, 0, 1);
+          const dotY = y + ratio * h;
+          this.minimapDynamicGfx.fillStyle(0xef233c, 0.95);
+          this.minimapDynamicGfx.fillCircle(x + w / 2, dotY, 3.5);
+          this.minimapDynamicGfx.lineStyle(1, 0xffffff, 0.85);
+          this.minimapDynamicGfx.strokeCircle(x + w / 2, dotY, 3.5);
+        }
+        return null;
+      });
+
+      if ((this as any).boss && (this as any).boss.active) {
+        const boss = (this as any).boss;
+        const ratio = Phaser.Math.Clamp(boss.y / WORLD_HEIGHT, 0, 1);
+        const dotY = y + ratio * h;
+        this.minimapDynamicGfx.fillStyle(0xff0054, 1);
+        this.minimapDynamicGfx.fillCircle(x + w / 2, dotY, 4.5);
+        this.minimapDynamicGfx.lineStyle(1.5, 0xffd166, 1);
+        this.minimapDynamicGfx.strokeCircle(x + w / 2, dotY, 4.5);
+      }
+    }
+
+    // Marcador brillante en tiempo real del jugador (punto blanco/amarillo con borde)
+    const playerRatio = Phaser.Math.Clamp(this.player.y / WORLD_HEIGHT, 0, 1);
+    const markerY = y + playerRatio * h;
+    const markerX = x + w / 2;
+
+    this.minimapDynamicGfx.fillStyle(0xffd166, 0.4);
+    this.minimapDynamicGfx.fillCircle(markerX, markerY, 7);
+    this.minimapDynamicGfx.fillStyle(0xffd166, 1);
+    this.minimapDynamicGfx.fillCircle(markerX, markerY, 4.5);
+    this.minimapDynamicGfx.fillStyle(0xffffff, 1);
+    this.minimapDynamicGfx.fillCircle(markerX, markerY, 2.5);
+    this.minimapDynamicGfx.lineStyle(1.5, 0x05140d, 0.9);
+    this.minimapDynamicGfx.strokeCircle(markerX, markerY, 4.5);
+  }
+
   public startLevel(level: number): void {
     this.currentLevel = level;
     this.updateLevelHUD();
@@ -974,6 +1082,9 @@ export class GameScene extends Phaser.Scene {
     const targetCameraY = Math.max(0, Math.min(WORLD_HEIGHT - this.scale.height, this.player.y - this.scale.height / 2));
     this.cameraY = Phaser.Math.Linear(this.cameraY, targetCameraY, 0.08);
     this.cameras.main.scrollY = this.cameraY;
+
+    // 7. Actualizar Minimapa / Altímetro de estratos en tiempo real
+    this.updateMinimap();
   }
 
   private renderWaterSurface(time: number): void {
