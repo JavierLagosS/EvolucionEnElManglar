@@ -7,6 +7,9 @@ import { EventBus } from '../core/events/EventBus';
 import { BaseFood } from '../entities/food/BaseFood';
 import { PHASE_CONFIGURATIONS } from '../config/evolutionConfig';
 
+export const WORLD_WIDTH = 1280;
+export const WORLD_HEIGHT = 2400;
+
 /**
  * Escena principal de "Evolución en el Manglar".
  * Integra nivel de manglar accesible, estética enriquecida estilo Kirby,
@@ -19,6 +22,9 @@ export class GameScene extends Phaser.Scene {
   public platforms!: Phaser.Physics.Arcade.StaticGroup;
   public foodGroup!: Phaser.GameObjects.Group;
   public waterZone!: Phaser.GameObjects.Zone;
+
+  // Seguimiento vertical de cámara
+  private cameraY: number = 0;
 
   // Fondo y Agua
   private waterSurfaceGfx!: Phaser.GameObjects.Graphics;
@@ -59,6 +65,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   public create(): void {
+    // Dimensiones del mundo físico y límites de cámara vertical
+    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
     // 1. Fondos vibrantes e iluminación atmosférica
     this.createAtmosphericBackground();
 
@@ -73,6 +83,11 @@ export class GameScene extends Phaser.Scene {
 
     // 5. Instanciar Jugador
     this.player = new Player(this, 100, 630);
+
+    // Inicializar posición de cámara sobre el jugador
+    const targetCameraY = Math.max(0, Math.min(WORLD_HEIGHT - this.scale.height, this.player.y - this.scale.height / 2));
+    this.cameraY = targetCameraY;
+    this.cameras.main.scrollY = this.cameraY;
 
     // 6. Configurar Entrada
     this.setupInput();
@@ -124,7 +139,7 @@ export class GameScene extends Phaser.Scene {
     const bgGfx = this.add.graphics();
 
     bgGfx.fillGradientStyle(0x06201b, 0x0a2f26, 0x144534, 0x1d5e46, 1);
-    bgGfx.fillRect(0, 0, 1280, 720);
+    bgGfx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     // Siluetas lejanas con niebla
     bgGfx.fillStyle(0x0e362b, 0.45);
@@ -275,9 +290,9 @@ export class GameScene extends Phaser.Scene {
       if (k === 'arrowup' || k === 'w' || k === ' ' || e.code === 'Space') this.rawKeys.jump = false;
     });
 
-    // Soporte para Clic de Ratón y Pantalla Táctil
+    // Soporte para Clic de Ratón y Pantalla Táctil con soporte de cámara vertical
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      this.pointerTarget = { x: pointer.x, y: pointer.y };
+      this.pointerTarget = { x: pointer.worldX, y: pointer.worldY };
     });
   }
 
@@ -287,27 +302,29 @@ export class GameScene extends Phaser.Scene {
     hudBg.fillRoundedRect(18, 18, 440, 114, 14);
     hudBg.lineStyle(2.5, 0x52b788, 0.9);
     hudBg.strokeRoundedRect(18, 18, 440, 114, 14);
+    hudBg.setScrollFactor(0);
 
     const titleStyle = { fontFamily: 'sans-serif', fontSize: '18px', color: '#95d5b2', fontStyle: 'bold' };
     const labelStyle = { fontFamily: 'sans-serif', fontSize: '14px', color: '#d8f3dc' };
 
-    this.phaseText = this.add.text(34, 28, 'Fase 1: Hongo del Manglar', titleStyle);
-    this.targetFoodText = this.add.text(34, 56, 'Dieta actual: Mosca Pequeña', labelStyle);
+    this.phaseText = this.add.text(34, 28, 'Fase 1: Hongo del Manglar', titleStyle).setScrollFactor(0);
+    this.targetFoodText = this.add.text(34, 56, 'Dieta actual: Mosca Pequeña', labelStyle).setScrollFactor(0);
 
-    this.add.text(34, 82, 'Evolución:', labelStyle);
-    this.add.rectangle(116, 92, 250, 18, 0x1b4332).setOrigin(0, 0.5);
-    this.progressBarFill = this.add.rectangle(116, 92, 248, 14, 0x52b788).setOrigin(0, 0.5);
+    this.add.text(34, 82, 'Evolución:', labelStyle).setScrollFactor(0);
+    this.add.rectangle(116, 92, 250, 18, 0x1b4332).setOrigin(0, 0.5).setScrollFactor(0);
+    this.progressBarFill = this.add.rectangle(116, 92, 248, 14, 0x52b788).setOrigin(0, 0.5).setScrollFactor(0);
     this.progressBarFill.setScale(0, 1);
-    this.progressPercentText = this.add.text(376, 83, '0%', { fontFamily: 'sans-serif', fontSize: '15px', color: '#ffffff', fontStyle: 'bold' });
+    this.progressPercentText = this.add.text(376, 83, '0%', { fontFamily: 'sans-serif', fontSize: '15px', color: '#ffffff', fontStyle: 'bold' }).setScrollFactor(0);
 
     const hintBg = this.add.graphics();
     hintBg.fillStyle(0x05140d, 0.75);
     hintBg.fillRoundedRect(880, 16, 380, 42, 8);
+    hintBg.setScrollFactor(0);
     this.add.text(895, 27, '🎮 Controles: Flechas / WASD / Clic | Salto: Espacio o W', {
       fontFamily: 'sans-serif',
       fontSize: '13px',
       color: '#b7e4c7'
-    });
+    }).setScrollFactor(0);
   }
 
   private bindDomainEvents(): void {
@@ -418,6 +435,11 @@ export class GameScene extends Phaser.Scene {
     // 4. Actualizar al jugador y su FSM
     this.player.handleInput(inputState, delta);
     this.player.update(time, delta);
+
+    // 5. Seguimiento suave vertical con cameraY
+    const targetCameraY = Math.max(0, Math.min(WORLD_HEIGHT - this.scale.height, this.player.y - this.scale.height / 2));
+    this.cameraY = Phaser.Math.Linear(this.cameraY, targetCameraY, 0.08);
+    this.cameras.main.scrollY = this.cameraY;
   }
 
   private renderWaterSurface(time: number): void {

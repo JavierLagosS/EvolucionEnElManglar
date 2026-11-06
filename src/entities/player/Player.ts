@@ -58,8 +58,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
       this.groundedGraceTimer > 0 ||
       this.body.blocked.down ||
       this.body.touching.down ||
-      this.body.wasTouching.down ||
-      (Math.abs(this.body.velocity.y) < 25 && this.y >= 640)
+      this.body.wasTouching.down
     );
   }
 
