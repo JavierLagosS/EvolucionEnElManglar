@@ -13,7 +13,8 @@ export const WORLD_HEIGHT = 2400;
 /**
  * Escena principal de "Evolución en el Manglar".
  * Integra nivel de manglar accesible, estética enriquecida estilo Kirby,
- * soporte de control universal (Teclado Phaser + DOM listeners + Clic/Touch) y HUD dinámico.
+ * soporte de control universal (Teclado Phaser + DOM listeners + Clic/Touch), HUD dinámico
+ * y soporte multinivel (Nivel 1: Exploración pacífica | Nivel 2: Manglar Hostil).
  */
 export class GameScene extends Phaser.Scene {
   public player!: Player;
@@ -22,6 +23,12 @@ export class GameScene extends Phaser.Scene {
   public platforms!: Phaser.Physics.Arcade.StaticGroup;
   public foodGroup!: Phaser.GameObjects.Group;
   public waterZone!: Phaser.GameObjects.Zone;
+
+  // Estado de Nivel y Modal de Victoria
+  public currentLevel: number = 1;
+  private levelText!: Phaser.GameObjects.Text;
+  private levelBadgeBg!: Phaser.GameObjects.Graphics;
+  private victoryModal: Phaser.GameObjects.Container | null = null;
 
   // Seguimiento vertical de cámara
   private cameraY: number = 0;
@@ -123,7 +130,9 @@ export class GameScene extends Phaser.Scene {
 
     // Overlap jugador vs zona de agua
     this.physics.add.overlap(this.player, this.waterZone, () => {
-      this.player.setInWater(true);
+      if (!this.player.isInWater) {
+        this.player.setInWater(true);
+      }
     });
 
     // Overlap jugador vs presas de comida
@@ -382,6 +391,22 @@ export class GameScene extends Phaser.Scene {
     this.progressBarFill.setScale(0, 1);
     this.progressPercentText = this.add.text(376, 83, '0%', { fontFamily: 'sans-serif', fontSize: '15px', color: '#ffffff', fontStyle: 'bold' }).setScrollFactor(0);
 
+    // Indicador y selector interactivo de Nivel (Nivel 1: Exploración / Nivel 2: Manglar Hostil)
+    this.levelBadgeBg = this.add.graphics().setScrollFactor(0);
+    this.levelText = this.add.text(495, 27, '🌱 Nivel: 1 (Exploración)', {
+      fontFamily: 'sans-serif',
+      fontSize: '13px',
+      color: '#95d5b2',
+      fontStyle: 'bold'
+    }).setScrollFactor(0);
+
+    this.levelText.setInteractive({ useHandCursor: true });
+    this.levelText.on('pointerdown', () => {
+      const nextLevel = this.currentLevel === 1 ? 2 : 1;
+      this.startLevel(nextLevel);
+    });
+    this.updateLevelHUD();
+
     const hintBg = this.add.graphics();
     hintBg.fillStyle(0x05140d, 0.75);
     hintBg.fillRoundedRect(880, 16, 380, 42, 8);
@@ -391,6 +416,152 @@ export class GameScene extends Phaser.Scene {
       fontSize: '13px',
       color: '#b7e4c7'
     }).setScrollFactor(0);
+  }
+
+  public startLevel(level: number): void {
+    this.currentLevel = level;
+    this.updateLevelHUD();
+
+    if (this.victoryModal) {
+      this.victoryModal.destroy();
+      this.victoryModal = null;
+    }
+
+    // Reiniciar al jugador a Fase 1 (Hongo del Manglar en y = 1450, evolución 0%)
+    this.evolutionManager.reset();
+    const phaseInfo = PHASE_CONFIGURATIONS[this.evolutionManager.currentPhase];
+    this.phaseText.setText(`Fase 1: ${phaseInfo.displayName}`);
+    this.targetFoodText.setText(`Dieta actual: ${this.getFoodLabel(this.evolutionManager.targetFood)}`);
+    this.progressBarFill.setScale(0, 1);
+    this.progressPercentText.setText('0%');
+
+    this.player.setPosition(120, 1450);
+    this.player.setVelocity(0, 0);
+    this.cameraY = Math.max(0, Math.min(WORLD_HEIGHT - this.scale.height, this.player.y - this.scale.height / 2));
+    this.cameras.main.scrollY = this.cameraY;
+
+    // Regenerar el ecosistema para el nivel elegido
+    this.foodManager.setLevel(level);
+  }
+
+  private updateLevelHUD(): void {
+    if (!this.levelText || !this.levelBadgeBg) return;
+
+    this.levelBadgeBg.clear();
+    const isLevel2 = this.currentLevel === 2;
+    const bgColor = isLevel2 ? 0x2b0909 : 0x05140d;
+    const strokeColor = isLevel2 ? 0xe63946 : 0x52b788;
+    const textColor = isLevel2 ? '#ff758f' : '#95d5b2';
+
+    this.levelBadgeBg.fillStyle(bgColor, 0.88);
+    this.levelBadgeBg.fillRoundedRect(480, 18, 225, 36, 10);
+    this.levelBadgeBg.lineStyle(2, strokeColor, 0.9);
+    this.levelBadgeBg.strokeRoundedRect(480, 18, 225, 36, 10);
+
+    this.levelText.setColor(textColor);
+    this.levelText.setText(isLevel2 ? '⚠️ Nivel: 2 (Manglar Hostil)' : '🌱 Nivel: 1 (Exploración)');
+  }
+
+  public showVictoryModal(): void {
+    if (this.victoryModal) {
+      this.victoryModal.destroy();
+    }
+
+    const modal = this.add.container(640, 360).setScrollFactor(0).setDepth(1000);
+    this.victoryModal = modal;
+
+    // Overlay oscuro
+    const overlay = this.add.rectangle(0, 0, 1280, 720, 0x000000, 0.65);
+    overlay.setInteractive();
+    modal.add(overlay);
+
+    // Recuadro estético estilo Kirby
+    const box = this.add.graphics();
+    box.fillStyle(0x051a12, 0.96);
+    box.fillRoundedRect(-280, -180, 560, 360, 20);
+    box.lineStyle(3.5, 0x52b788, 1);
+    box.strokeRoundedRect(-280, -180, 560, 360, 20);
+    modal.add(box);
+
+    const isLevel1 = this.currentLevel === 1;
+
+    const title = this.add.text(0, -120, isLevel1 ? '¡ECOSISTEMA DOMINADO!' : '¡DEPREDADOR SUPREMO!', {
+      fontFamily: 'sans-serif',
+      fontSize: '24px',
+      color: '#ffd166',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    modal.add(title);
+
+    const subtitle = this.add.text(0, -60, isLevel1
+      ? 'Has alcanzado la cima evolutiva como Libélula en el Nivel 1.\n¿Listo para el verdadero peligro y depredadores del Nivel 2?'
+      : '¡Has superado el Manglar Hostil frente a todos los depredadores!\n¡Evolución total completada!', {
+      fontFamily: 'sans-serif',
+      fontSize: '15px',
+      color: '#d8f3dc',
+      align: 'center',
+      lineSpacing: 6
+    }).setOrigin(0.5);
+    modal.add(subtitle);
+
+    // Botón principal destacado: "Avanzar al Nivel 2: Manglar Hostil"
+    const btnWidth = 380;
+    const btnHeight = 52;
+    const btnBg = this.add.graphics();
+    btnBg.fillStyle(0x1b4332, 1);
+    btnBg.fillRoundedRect(-btnWidth / 2, 15, btnWidth, btnHeight, 12);
+    btnBg.lineStyle(2.5, 0x52b788, 1);
+    btnBg.strokeRoundedRect(-btnWidth / 2, 15, btnWidth, btnHeight, 12);
+    modal.add(btnBg);
+
+    const btnText = this.add.text(0, 41, isLevel1 ? '⚡ Avanzar al Nivel 2: Manglar Hostil' : '🔄 Reiniciar Nivel 2 (Hostil)', {
+      fontFamily: 'sans-serif',
+      fontSize: '16px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    modal.add(btnText);
+
+    const btnHit = this.add.zone(0, 41, btnWidth, btnHeight).setInteractive({ useHandCursor: true });
+    btnHit.on('pointerover', () => {
+      btnBg.clear();
+      btnBg.fillStyle(0x2d6a4f, 1);
+      btnBg.fillRoundedRect(-btnWidth / 2, 15, btnWidth, btnHeight, 12);
+      btnBg.lineStyle(2.5, 0x95d5b2, 1);
+      btnBg.strokeRoundedRect(-btnWidth / 2, 15, btnWidth, btnHeight, 12);
+    });
+    btnHit.on('pointerout', () => {
+      btnBg.clear();
+      btnBg.fillStyle(0x1b4332, 1);
+      btnBg.fillRoundedRect(-btnWidth / 2, 15, btnWidth, btnHeight, 12);
+      btnBg.lineStyle(2.5, 0x52b788, 1);
+      btnBg.strokeRoundedRect(-btnWidth / 2, 15, btnWidth, btnHeight, 12);
+    });
+    btnHit.on('pointerdown', () => {
+      this.startLevel(2);
+    });
+    modal.add(btnHit);
+
+    // Botón secundario para reiniciar o alternar
+    const btnSec = this.add.text(0, 115, isLevel1 ? 'Reiniciar Nivel 1 (Exploración)' : 'Volver a Nivel 1 (Pacífico)', {
+      fontFamily: 'sans-serif',
+      fontSize: '14px',
+      color: '#95d5b2'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btnSec.on('pointerdown', () => {
+      this.startLevel(1);
+    });
+    modal.add(btnSec);
+
+    // Animación elástica estilo Kirby
+    modal.setScale(0);
+    this.tweens.add({
+      targets: modal,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 350,
+      ease: 'Back.easeOut'
+    });
   }
 
   private bindDomainEvents(): void {
@@ -415,6 +586,7 @@ export class GameScene extends Phaser.Scene {
 
     EventBus.on('evolution:completed', () => {
       this.phaseText.setText('¡Evolución Cúspide: Libélula!');
+      this.showVictoryModal();
     });
   }
 
