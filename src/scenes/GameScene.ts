@@ -428,10 +428,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   public override update(time: number, delta: number): void {
-    // 1. Detectar si sigue dentro del agua
-    const isOverlappingWater = this.physics.overlap(this.player, this.waterZone);
-    if (!isOverlappingWater && this.player.isInWater) {
-      this.player.setInWater(false);
+    // 1. Físicas condicionales por estrato: Agua (y > 1550) vs Tierra / Aire (y <= 1550)
+    const inAquaticStratum = this.player.y > 1550 || this.physics.overlap(this.player, this.waterZone);
+    if (inAquaticStratum !== this.player.isInWater) {
+      this.player.setInWater(inAquaticStratum);
     }
 
     // 2. Renderizado dinámico de la ondulación del agua

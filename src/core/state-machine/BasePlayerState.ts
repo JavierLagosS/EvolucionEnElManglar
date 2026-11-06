@@ -40,6 +40,11 @@ export abstract class BasePlayerState implements IPlayerState {
     this.jumpBufferTimer = 0;
     this.coyoteTimer = 0;
     this.wasGroundedLastFrame = player.isGrounded;
+
+    // 5. Adaptación condicional inmediata al estrato acuático si ya se encuentra en el agua
+    if ((player.isInWater || player.y > 1550) && this.onWaterEnter) {
+      this.onWaterEnter(player);
+    }
   }
 
   public exit(_player: IPlayer): void {

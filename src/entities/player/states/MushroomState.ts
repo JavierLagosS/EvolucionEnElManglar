@@ -28,7 +28,25 @@ export class MushroomState extends BasePlayerState {
     this.autoHopTimer = 0;
   }
 
+  public override onWaterEnter(player: IPlayer): void {
+    // Reducción de gravedad a un 25% y resistencia hidrodinámica
+    player.body.setGravityY(this.physicsConfig.gravityY * 0.25);
+    player.body.setDrag(320, 320);
+    player.body.setMaxVelocity(this.physicsConfig.maxVelocityX, 360);
+  }
+
+  public override onWaterExit(player: IPlayer): void {
+    // Restaurar física terrestre original
+    player.applyPhysicsConfig(this.physicsConfig);
+  }
+
   public handleInput(player: IPlayer, input: PlayerInput, delta: number): void {
+    // Si está en el Estrato Acuático (y > 1550 o inWater), permitir nado multidireccional fluido sin requerir suelo
+    if (player.isInWater || player.y > 1550) {
+      this.handleWaterInput(player, input);
+      return;
+    }
+
     if (this.autoHopTimer > 0) {
       this.autoHopTimer -= delta;
     }
@@ -110,5 +128,42 @@ export class MushroomState extends BasePlayerState {
     player.setVelocity(vx, impulseY);
     player.triggerSquashAndStretch(0.7, 1.45, 180);
     EventBus.emit('player:jump', { phase: this.phase, x: player.x, y: player.y });
+  }
+
+  private handleWaterInput(player: IPlayer, input: PlayerInput): void {
+    let moveX = 0;
+    let moveY = 0;
+
+    if (input.left) {
+      moveX -= 1;
+      player.setFacingDirection(-1);
+    }
+    if (input.right) {
+      moveX += 1;
+      player.setFacingDirection(1);
+    }
+
+    // Nado multidireccional continuo en agua sin depender del suelo
+    if (input.up || input.jump) {
+      moveY -= 1;
+    }
+    if (input.down) {
+      moveY += 1;
+    }
+
+    const swimSpeedX = 260;
+    const swimSpeedY = 240;
+
+    if (moveX !== 0) {
+      player.setVelocityX(moveX * swimSpeedX);
+    }
+    if (moveY !== 0) {
+      player.setVelocityY(moveY * swimSpeedY);
+    }
+
+    if (input.jumpJustDown) {
+      player.setVelocityY(-340);
+      player.triggerSquashAndStretch(0.8, 1.25, 140);
+    }
   }
 }

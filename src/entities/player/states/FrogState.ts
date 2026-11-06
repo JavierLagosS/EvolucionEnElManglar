@@ -22,7 +22,7 @@ export class FrogState extends BasePlayerState {
   private readonly WATER_DRAG = 350;
 
   public handleInput(player: IPlayer, input: PlayerInput, delta: number): void {
-    if (player.isInWater) {
+    if (player.isInWater || player.y > 1550) {
       this.handleWaterInput(player, input);
     } else {
       this.handleLandInput(player, input, delta);
@@ -67,32 +67,36 @@ export class FrogState extends BasePlayerState {
       moveX += 1;
       player.setFacingDirection(1);
     }
-    if (input.up) moveY -= 1;
+    // Permite nadar continuamente pulsando Espacio / W / Up o Flechas sin depender del suelo
+    if (input.up || input.jump) moveY -= 1;
     if (input.down) moveY += 1;
 
-    // Impulso de nado estilo braza de rana al presionar salto en agua
+    // Nado multidireccional reactivo
+    if (moveX !== 0) {
+      player.setVelocityX(moveX * this.WATER_SWIM_FORCE);
+    }
+    if (moveY !== 0) {
+      player.setVelocityY(moveY * this.WATER_SWIM_FORCE);
+    }
+
+    // Impulso de patada de nado al presionar salto
     if (input.jumpJustDown) {
-      const impulseY = moveY !== 0 ? moveY * this.WATER_SWIM_FORCE : -this.WATER_SWIM_FORCE;
-      const impulseX = moveX !== 0 ? moveX * this.WATER_SWIM_FORCE : player.facingDirection * 150;
+      const impulseY = moveY !== 0 ? moveY * (this.WATER_SWIM_FORCE * 1.25) : -this.WATER_SWIM_FORCE * 1.25;
+      const impulseX = moveX !== 0 ? moveX * (this.WATER_SWIM_FORCE * 1.25) : player.facingDirection * 180;
       player.setVelocity(impulseX, impulseY);
       player.triggerSquashAndStretch(1.2, 0.8, 140);
-    } else {
-      // Movimiento continuo suave en agua
-      if (moveX !== 0) player.body.setAccelerationX(moveX * this.WATER_SWIM_FORCE);
-      if (moveY !== 0) player.body.setAccelerationY(moveY * this.WATER_SWIM_FORCE);
     }
   }
 
   public override onWaterEnter(player: IPlayer): void {
-    player.setInWater(true);
-    // Cambiar dinámicamente propiedades físicas para nado
-    player.body.setAllowGravity(false);
+    // Reducir la gravedad a un 25% y aplicar fricción acuática
+    player.body.setGravityY(this.physicsConfig.gravityY * 0.25);
     player.body.setDrag(this.WATER_DRAG, this.WATER_DRAG);
-    player.triggerSquashAndStretch(1.2, 0.8, 200);
+    player.body.setMaxVelocity(this.physicsConfig.maxVelocityX, 380);
+    player.triggerSquashAndStretch(1.2, 0.8, 160);
   }
 
   public override onWaterExit(player: IPlayer): void {
-    player.setInWater(false);
     // Restaurar física terrestre original de la rana
     player.applyPhysicsConfig(this.physicsConfig);
   }

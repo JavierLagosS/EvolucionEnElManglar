@@ -21,6 +21,20 @@ export class TadpoleState extends BasePlayerState {
     this.dashCooldownTimer = 0;
   }
 
+  public override onWaterEnter(player: IPlayer): void {
+    player.body.setAllowGravity(false);
+    player.body.setGravityY(0);
+    player.body.setDrag(300, 300);
+    player.body.setMaxVelocity(320, 320);
+  }
+
+  public override onWaterExit(player: IPlayer): void {
+    // Al salir a la superficie aérea, la gravedad atrae al renacuajo de vuelta al agua
+    player.body.setAllowGravity(true);
+    player.body.setGravityY(600);
+    player.body.setDrag(120, 0);
+  }
+
   public handleInput(player: IPlayer, input: PlayerInput, delta: number): void {
     let moveX = 0;
     let moveY = 0;
