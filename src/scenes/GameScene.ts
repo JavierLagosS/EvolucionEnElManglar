@@ -14,8 +14,8 @@ export const WORLD_HEIGHT = 2400;
 /**
  * Escena principal de "Evolución en el Manglar".
  * Integra nivel de manglar accesible, estética enriquecida estilo Kirby,
- * soporte de control universal (Teclado Phaser + DOM listeners + Clic/Touch), HUD dinámico
- * y soporte multinivel con depredadores y jerarquía trófica en el Nivel 2.
+ * soporte de control universal (Teclado Phaser + DOM listeners + Clic/Touch), HUD dinámico,
+ * soporte multinivel con depredadores y habilidades activas por fase (Shift / Clic derecho).
  */
 export class GameScene extends Phaser.Scene {
   public player!: Player;
@@ -31,6 +31,13 @@ export class GameScene extends Phaser.Scene {
   private levelText!: Phaser.GameObjects.Text;
   private levelBadgeBg!: Phaser.GameObjects.Graphics;
   private victoryModal: Phaser.GameObjects.Container | null = null;
+
+  // Habilidades activas y Cooldown
+  private abilityCooldownTimer: number = 0;
+  private readonly ABILITY_COOLDOWN_MS: number = 3000;
+  private abilityBadgeBg!: Phaser.GameObjects.Graphics;
+  private abilityBarFill!: Phaser.GameObjects.Rectangle;
+  private abilityText!: Phaser.GameObjects.Text;
 
   // Seguimiento vertical de cámara
   private cameraY: number = 0;
@@ -98,7 +105,7 @@ export class GameScene extends Phaser.Scene {
     this.cameraY = targetCameraY;
     this.cameras.main.scrollY = this.cameraY;
 
-    // 6. Configurar Entrada
+    // 6. Configurar Entrada (Teclas, Clic derecho y Shift)
     this.setupInput();
 
     // 7. Máquina y Gestor de Dominio
@@ -203,6 +210,134 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Dispara la habilidad activa según la fase evolutiva actual (Shift o Clic derecho).
+   */
+  public triggerPlayerAbility(): boolean {
+    if (this.abilityCooldownTimer > 0) return false;
+    this.abilityCooldownTimer = this.ABILITY_COOLDOWN_MS;
+
+    const currentPhase = this.evolutionManager.currentPhase;
+    switch (currentPhase) {
+      case EvolutionPhase.MUSHROOM:
+        this.executeMushroomSporeCloud();
+        break;
+      case EvolutionPhase.TADPOLE:
+        this.executeTadpoleSubaquaticDash();
+        break;
+      case EvolutionPhase.FROG:
+        this.executeFrogElasticLeap();
+        break;
+      case EvolutionPhase.DRAGONFLY:
+        this.executeDragonflySupersonicDash();
+        break;
+    }
+
+    EventBus.emit('ability:used', { phase: currentPhase, x: this.player.x, y: this.player.y });
+    return true;
+  }
+
+  // --- HABILIDAD 1: Nube de Esporas (Hongo) ---
+  private executeMushroomSporeCloud(): void {
+    const sporeGfx = this.add.graphics();
+    const durationMs = 3000;
+    const startTime = this.time.now;
+
+    const sporeTimer = this.time.addEvent({
+      delay: 16,
+      repeat: 180, // ~3000ms
+      callback: () => {
+        const elapsed = this.time.now - startTime;
+        if (elapsed > durationMs) return;
+
+        sporeGfx.clear();
+        sporeGfx.lineStyle(2.5, 0x52b788, 0.85);
+        sporeGfx.fillStyle(0x74c69d, 0.16);
+        sporeGfx.strokeCircle(this.player.x, this.player.y, 220);
+        sporeGfx.fillCircle(this.player.x, this.player.y, 220);
+
+        // Atraer suavemente y ralentizar al 30% a las Moscas Pequeñas dentro de 220px
+        this.foodGroup.children.iterate((child) => {
+          const food = child as unknown as BaseFood;
+          if (food && food.isActive && food.type === FoodType.FLY) {
+            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, food.x, food.y);
+            if (dist <= 220) {
+              food.x += (this.player.x - food.x) * 0.04;
+              food.y += (this.player.y - food.y) * 0.04;
+            }
+          }
+          return null;
+        });
+      }
+    });
+
+    this.time.delayedCall(durationMs, () => {
+      sporeGfx.destroy();
+      sporeTimer.destroy();
+    });
+  }
+
+  // --- HABILIDAD 2: Dash Subacuático (Renacuajo) ---
+  private executeTadpoleSubaquaticDash(): void {
+    const dirX = this.player.facingDirection;
+    const currentVy = this.player.body.velocity.y;
+    this.player.setVelocity(dirX * 720, currentVy * 0.5);
+    (this.player as any).invulnerableTimer = 25; // Inmunidad durante el impulso
+    this.player.triggerSquashAndStretch(1.6, 0.6, 250);
+
+    // Estela de burbujas blancas
+    for (let i = 0; i < 6; i++) {
+      this.time.delayedCall(i * 35, () => {
+        const bubble = this.add.image(this.player.x, this.player.y, 'bubble_particle');
+        bubble.setScale(Phaser.Math.FloatBetween(0.8, 1.4));
+        this.tweens.add({
+          targets: bubble,
+          alpha: 0,
+          y: bubble.y - 35,
+          duration: 400,
+          onComplete: () => bubble.destroy()
+        });
+      });
+    }
+  }
+
+  // --- HABILIDAD 3: Salto Elástico / Emboscada (Rana) ---
+  private executeFrogElasticLeap(): void {
+    const dirX = this.player.facingDirection;
+    this.player.setVelocity(dirX * 380, -780);
+    this.player.triggerSquashAndStretch(0.65, 1.55, 250);
+  }
+
+  // --- HABILIDAD 4: Hover + Embestida Supersónica (Libélula) ---
+  private executeDragonflySupersonicDash(): void {
+    const targetX = this.input.activePointer.worldX || (this.player.x + this.player.facingDirection * 400);
+    const targetY = this.input.activePointer.worldY || this.player.y;
+    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY);
+    const speed = 920;
+
+    this.player.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    (this.player as any).invulnerableTimer = 25;
+    this.player.triggerSquashAndStretch(1.7, 0.6, 220);
+
+    // Estela de luz verde/cian
+    for (let i = 0; i < 7; i++) {
+      this.time.delayedCall(i * 30, () => {
+        const ghost = this.add.sprite(this.player.x, this.player.y, 'player_dragonfly');
+        ghost.setAlpha(0.6);
+        ghost.setTint(0x00f5d4);
+        ghost.setFlipX(this.player.facingDirection === -1);
+        this.tweens.add({
+          targets: ghost,
+          alpha: 0,
+          scaleX: 1.2,
+          scaleY: 1.2,
+          duration: 300,
+          onComplete: () => ghost.destroy()
+        });
+      });
+    }
+  }
+
   private createAtmosphericBackground(): void {
     const bgGfx = this.add.graphics();
 
@@ -222,14 +357,11 @@ export class GameScene extends Phaser.Scene {
     bgGfx.fillStyle(0x0e362b, 0.4);
     for (let i = 0; i < 7; i++) {
       const x = i * 210 + 30;
-      // Troncos en estrato medio
       bgGfx.fillRect(x, 600, 44, 950);
-      // Follaje en dosel
       bgGfx.fillCircle(x + 22, 540, 100);
       bgGfx.fillCircle(x - 20, 580, 80);
       bgGfx.fillCircle(x + 65, 580, 85);
 
-      // Copas superiores en Estrato 1
       bgGfx.fillCircle(x + 20, 220, 120);
       bgGfx.fillCircle(x - 30, 260, 90);
       bgGfx.fillCircle(x + 70, 260, 95);
@@ -390,7 +522,7 @@ export class GameScene extends Phaser.Scene {
       };
     }
 
-    // Respaldo global por DOM
+    // Respaldo global por DOM para movimiento y Habilidad (Shift)
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       if (k === 'arrowleft' || k === 'a') {
@@ -405,6 +537,9 @@ export class GameScene extends Phaser.Scene {
         if (!this.rawKeys.jump) this.rawKeys.jumpJustDown = true;
         this.rawKeys.jump = true;
       }
+      if (e.key === 'Shift') {
+        this.triggerPlayerAbility();
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -414,8 +549,18 @@ export class GameScene extends Phaser.Scene {
       if (k === 'arrowup' || k === 'w' || k === ' ' || e.code === 'Space') this.rawKeys.jump = false;
     });
 
+    // Clic Derecho para Habilidad (con preventDefault)
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.triggerPlayerAbility();
+    });
+
     // Soporte para Clic de Ratón y Pantalla Táctil con soporte de cámara vertical
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.rightButtonDown()) {
+        this.triggerPlayerAbility();
+        return;
+      }
       this.pointerTarget = { x: pointer.worldX, y: pointer.worldY };
     });
   }
@@ -456,13 +601,28 @@ export class GameScene extends Phaser.Scene {
     });
     this.updateLevelHUD();
 
+    // Barra e indicador de Habilidad Activa (Shift / Clic Derecho)
+    this.abilityBadgeBg = this.add.graphics().setScrollFactor(0);
+    this.abilityBarFill = this.add.rectangle(730, 42, 136, 6, 0x52b788).setOrigin(0, 0.5).setScrollFactor(0);
+    this.abilityText = this.add.text(730, 22, '⚡ Habilidad: LISTA', {
+      fontFamily: 'sans-serif',
+      fontSize: '12px',
+      color: '#95d5b2',
+      fontStyle: 'bold'
+    }).setScrollFactor(0);
+    this.abilityText.setInteractive({ useHandCursor: true });
+    this.abilityText.on('pointerdown', () => {
+      this.triggerPlayerAbility();
+    });
+    this.updateAbilityHUD();
+
     const hintBg = this.add.graphics();
     hintBg.fillStyle(0x05140d, 0.75);
-    hintBg.fillRoundedRect(880, 16, 380, 42, 8);
+    hintBg.fillRoundedRect(900, 16, 360, 42, 8);
     hintBg.setScrollFactor(0);
-    this.add.text(895, 27, '🎮 Controles: Flechas / WASD / Clic | Salto: Espacio o W', {
+    this.add.text(910, 27, '🎮 Controles: Flechas/WASD | Habilidad: Shift/Clic Der', {
       fontFamily: 'sans-serif',
-      fontSize: '13px',
+      fontSize: '12px',
       color: '#b7e4c7'
     }).setScrollFactor(0);
   }
@@ -528,6 +688,30 @@ export class GameScene extends Phaser.Scene {
 
     this.levelText.setColor(textColor);
     this.levelText.setText(isLevel2 ? '⚠️ Nivel: 2 (Manglar Hostil)' : '🌱 Nivel: 1 (Exploración)');
+  }
+
+  private updateAbilityHUD(): void {
+    if (!this.abilityText || !this.abilityBarFill || !this.abilityBadgeBg) return;
+
+    this.abilityBadgeBg.clear();
+    this.abilityBadgeBg.fillStyle(0x05140d, 0.88);
+    this.abilityBadgeBg.fillRoundedRect(720, 18, 165, 36, 10);
+    this.abilityBadgeBg.lineStyle(1.8, 0x52b788, 0.85);
+    this.abilityBadgeBg.strokeRoundedRect(720, 18, 165, 36, 10);
+
+    if (this.abilityCooldownTimer <= 0) {
+      this.abilityText.setColor('#52b788');
+      this.abilityText.setText('⚡ Habilidad: LISTA');
+      this.abilityBarFill.setScale(1, 1);
+      this.abilityBarFill.setFillStyle(0x52b788);
+    } else {
+      const remainingSec = (this.abilityCooldownTimer / 1000).toFixed(1);
+      const ratio = 1 - (this.abilityCooldownTimer / this.ABILITY_COOLDOWN_MS);
+      this.abilityText.setColor('#ffd166');
+      this.abilityText.setText(`⚡ Recargando (${remainingSec}s)`);
+      this.abilityBarFill.setScale(Math.max(0, ratio), 1);
+      this.abilityBarFill.setFillStyle(0xfb8500);
+    }
   }
 
   public showVictoryModal(): void {
@@ -677,7 +861,13 @@ export class GameScene extends Phaser.Scene {
     // 2. Renderizado dinámico de la ondulación del agua
     this.renderWaterSurface(time);
 
-    // 3. Mapeo de entradas unificado (Phaser Keys + DOM Raw Keys + Clic)
+    // 3. Temporizador de Habilidad y actualización de HUD
+    if (this.abilityCooldownTimer > 0) {
+      this.abilityCooldownTimer = Math.max(0, this.abilityCooldownTimer - delta);
+    }
+    this.updateAbilityHUD();
+
+    // 4. Mapeo de entradas unificado (Phaser Keys + DOM Raw Keys + Clic)
     let isLeft = (this.cursors && this.cursors.left.isDown) || (this.wasd && this.wasd.A.isDown) || this.rawKeys.left;
     let isRight = (this.cursors && this.cursors.right.isDown) || (this.wasd && this.wasd.D.isDown) || this.rawKeys.right;
     let isUp = (this.cursors && this.cursors.up.isDown) || (this.wasd && this.wasd.W.isDown) || this.rawKeys.up;
@@ -738,11 +928,11 @@ export class GameScene extends Phaser.Scene {
       actionJustDown: false
     };
 
-    // 4. Actualizar al jugador y su FSM
+    // 5. Actualizar al jugador y su FSM
     this.player.handleInput(inputState, delta);
     this.player.update(time, delta);
 
-    // 5. Seguimiento suave vertical con cameraY
+    // 6. Seguimiento suave vertical con cameraY
     const targetCameraY = Math.max(0, Math.min(WORLD_HEIGHT - this.scale.height, this.player.y - this.scale.height / 2));
     this.cameraY = Phaser.Math.Linear(this.cameraY, targetCameraY, 0.08);
     this.cameras.main.scrollY = this.cameraY;
