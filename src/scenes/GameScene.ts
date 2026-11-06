@@ -2,10 +2,11 @@ import Phaser from 'phaser';
 import { Player } from '../entities/player/Player';
 import { EvolutionManager } from '../managers/EvolutionManager';
 import { FoodManager } from '../managers/FoodManager';
-import { PlayerInput, FoodType } from '../core/types/GameTypes';
+import { PlayerInput, FoodType, EvolutionPhase } from '../core/types/GameTypes';
 import { EventBus } from '../core/events/EventBus';
 import { BaseFood } from '../entities/food/BaseFood';
 import { PHASE_CONFIGURATIONS } from '../config/evolutionConfig';
+import { PredatorFish, HunterFrog } from '../entities/predators/PredatorEntities';
 
 export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 2400;
@@ -14,7 +15,7 @@ export const WORLD_HEIGHT = 2400;
  * Escena principal de "Evolución en el Manglar".
  * Integra nivel de manglar accesible, estética enriquecida estilo Kirby,
  * soporte de control universal (Teclado Phaser + DOM listeners + Clic/Touch), HUD dinámico
- * y soporte multinivel (Nivel 1: Exploración pacífica | Nivel 2: Manglar Hostil).
+ * y soporte multinivel con depredadores y jerarquía trófica en el Nivel 2.
  */
 export class GameScene extends Phaser.Scene {
   public player!: Player;
@@ -22,6 +23,7 @@ export class GameScene extends Phaser.Scene {
   public foodManager!: FoodManager;
   public platforms!: Phaser.Physics.Arcade.StaticGroup;
   public foodGroup!: Phaser.GameObjects.Group;
+  public predatorGroup!: Phaser.GameObjects.Group;
   public waterZone!: Phaser.GameObjects.Zone;
 
   // Estado de Nivel y Modal de Victoria
@@ -106,10 +108,13 @@ export class GameScene extends Phaser.Scene {
     this.foodGroup = this.add.group({ runChildUpdate: true });
     this.foodManager = new FoodManager(this, this.evolutionManager, this.foodGroup);
 
-    // 9. REGISTRAR TODAS LAS FÍSICAS Y COLISIONES (con todos los objetos ya instanciados)
+    // 9. Grupo de Depredadores (Activo en Nivel 2)
+    this.predatorGroup = this.add.group({ runChildUpdate: true });
+
+    // 10. REGISTRAR TODAS LAS FÍSICAS Y COLISIONES (con todos los objetos ya instanciados)
     this.setupPhysicsCollisions();
 
-    // 10. Capa de Presentación / HUD
+    // 11. Capa de Presentación / HUD
     this.createHUD();
     this.bindDomainEvents();
 
@@ -135,13 +140,67 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Overlap jugador vs presas de comida
+    // Overlap jugador vs presas de comida (con jerarquía trófica en Nivel 2)
     this.physics.add.overlap(this.player, this.foodGroup, (_p, foodObj) => {
       const food = foodObj as unknown as BaseFood;
-      if (food && food.isActive) {
-        this.evolutionManager.feed(food);
+      if (!food || !food.isActive) return;
+
+      if (this.currentLevel === 2) {
+        const playerRank = this.getPlayerPhaseRank();
+        const foodRank = this.getFoodRequiredPhase(food.type);
+
+        if (foodRank > playerRank) {
+          // Criatura de estrato superior: ataca al jugador
+          this.handleTrophicDamage(food as unknown as Phaser.GameObjects.GameObject);
+          return;
+        }
+      }
+
+      this.evolutionManager.feed(food);
+    });
+
+    // Overlap jugador vs depredadores patrullando en Nivel 2
+    this.physics.add.overlap(this.player, this.predatorGroup, (_p, predObj) => {
+      if (this.currentLevel === 2) {
+        this.handleTrophicDamage(predObj as Phaser.GameObjects.GameObject);
       }
     });
+  }
+
+  /**
+   * Gestiona el impacto trófico: Knockback, penalización del 15% e invulnerabilidad temporal.
+   */
+  public handleTrophicDamage(attacker: Phaser.GameObjects.GameObject): void {
+    if (this.player.isInvulnerable()) return;
+
+    const attackerX = (attacker as any).x ?? this.player.x;
+    const attackerY = (attacker as any).y ?? this.player.y;
+
+    // 1. Knockback y parpadeo rojo de daño
+    this.player.takeDamage(attackerX, attackerY);
+
+    // 2. Penalización de 15% de evolución
+    this.evolutionManager.penalizeProgress(15);
+  }
+
+  public getPlayerPhaseRank(): number {
+    switch (this.evolutionManager.currentPhase) {
+      case EvolutionPhase.MUSHROOM: return 1;
+      case EvolutionPhase.TADPOLE: return 2;
+      case EvolutionPhase.FROG: return 3;
+      case EvolutionPhase.DRAGONFLY: return 4;
+      default: return 1;
+    }
+  }
+
+  public getFoodRequiredPhase(foodType: FoodType): number {
+    switch (foodType) {
+      case FoodType.FLY: return 1;
+      case FoodType.FISH: return 2;
+      case FoodType.BIG_FLY: return 3;
+      case FoodType.WASP: return 4;
+      default: return 1;
+    }
   }
 
   private createAtmosphericBackground(): void {
@@ -244,12 +303,10 @@ export class GameScene extends Phaser.Scene {
     // ==========================================
     // ESTRATO 3: MUNDO ACUÁTICO PROFUNDO (y: 1550 a 2400)
     // ==========================================
-    // Suelo marino continuo en y = 2360
     for (let x = 80; x <= 1280; x += 160) {
       this.platforms.create(x, 2360, 'mangrove_platform');
     }
 
-    // Rocas y plataformas subacuáticas
     this.platforms.create(250, 2180, 'mangrove_platform');
     this.platforms.create(850, 2060, 'mangrove_platform');
     this.platforms.create(440, 1920, 'mangrove_platform');
@@ -259,17 +316,13 @@ export class GameScene extends Phaser.Scene {
     // ==========================================
     // ESTRATO 2: SUELO DEL MANGLAR Y RAÍCES (y: 800 a 1600)
     // ==========================================
-    // Suelo en y = 1550 dejando amplia abertura central (x: 360 a 920) para sumergirse al agua
-    // Orilla izquierda:
     this.platforms.create(80, 1550, 'mangrove_platform');
     this.platforms.create(220, 1550, 'mangrove_platform');
     this.platforms.create(360, 1550, 'mangrove_platform');
-    // Orilla derecha:
     this.platforms.create(920, 1550, 'mangrove_platform');
     this.platforms.create(1060, 1550, 'mangrove_platform');
     this.platforms.create(1200, 1550, 'mangrove_platform');
 
-    // Escalones tipo raíces de manglar para ascender
     this.platforms.create(220, 1420, 'mangrove_platform');
     this.platforms.create(380, 1310, 'mangrove_platform');
     this.platforms.create(560, 1200, 'mangrove_platform');
@@ -281,7 +334,6 @@ export class GameScene extends Phaser.Scene {
     // ==========================================
     // ESTRATO 1: DOSEL AÉREO (y: 0 a 800)
     // ==========================================
-    // Ramas altas espaciadas en el cielo del manglar
     this.platforms.create(480, 740, 'mangrove_platform');
     this.platforms.create(200, 650, 'mangrove_platform');
     this.platforms.create(520, 540, 'mangrove_platform');
@@ -292,11 +344,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createWaterBasin(): void {
-    // Zona de colisión del agua a todo lo ancho (x: 0 a 1280, y: 1550 a 2400)
     this.waterZone = this.add.zone(640, 1975, 1280, 850);
     this.physics.world.enable(this.waterZone, Phaser.Physics.Arcade.STATIC_BODY);
 
-    // Gráficos del agua translúcida a todo el ancho
     const waterDeepGfx = this.add.graphics();
     waterDeepGfx.fillStyle(0x0077b6, 0.42);
     waterDeepGfx.fillRect(0, 1550, 1280, 850);
@@ -306,7 +356,6 @@ export class GameScene extends Phaser.Scene {
 
     this.waterSurfaceGfx = this.add.graphics();
 
-    // Burbujas dinámicas que suben por todo el estanque submarino
     for (let i = 0; i < 20; i++) {
       const bx = Phaser.Math.Between(40, 1240);
       const by = Phaser.Math.Between(1650, 2350);
@@ -442,6 +491,25 @@ export class GameScene extends Phaser.Scene {
 
     // Regenerar el ecosistema para el nivel elegido
     this.foodManager.setLevel(level);
+
+    // En Nivel 2, activar depredadores patrullando
+    if (level === 2) {
+      this.spawnPredators();
+    } else {
+      this.predatorGroup.clear(true, true);
+    }
+  }
+
+  public spawnPredators(): void {
+    this.predatorGroup.clear(true, true);
+
+    // Pez Depredador Grande en Estrato Acuático (y > 1550)
+    const predatorFish = new PredatorFish(this, 600, 1950);
+    this.predatorGroup.add(predatorFish);
+
+    // Rana Cazadora en Estrato Medio (y entre 1200 y 1550)
+    const hunterFrog = new HunterFrog(this, 550, 1420);
+    this.predatorGroup.add(hunterFrog);
   }
 
   private updateLevelHUD(): void {
