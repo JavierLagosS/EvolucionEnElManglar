@@ -349,6 +349,68 @@ export class BootScene extends Phaser.Scene {
     gfx.fillCircle(32, 36, 5);
     gfx.generateTexture('hunter_frog', 64, 50);
 
+    // ==========================================
+    // 8. JEFE FINAL: MARTÍN PESCADOR GIGANTE (96 x 64)
+    // ==========================================
+    gfx.clear();
+    gfx.lineStyle(3.5, 0x031926, 1);
+
+    // Cola con plumas azul marino
+    gfx.fillStyle(0x003566, 1);
+    gfx.fillTriangle(20, 36, 4, 30, 4, 44);
+    gfx.strokeTriangle(20, 36, 4, 30, 4, 44);
+
+    // Vientre naranja intenso
+    gfx.fillStyle(0xf77f00, 1);
+    gfx.fillEllipse(44, 38, 30, 18);
+    gfx.strokeEllipse(44, 38, 30, 18);
+
+    // Cuerpo azul rey
+    gfx.fillStyle(0x0077b6, 1);
+    gfx.fillEllipse(42, 30, 32, 16);
+    gfx.strokeEllipse(42, 30, 32, 16);
+
+    // Ala cian con plumas superpuestas
+    gfx.fillStyle(0x48cae4, 1);
+    gfx.beginPath();
+    gfx.moveTo(30, 24);
+    gfx.lineTo(58, 26);
+    gfx.lineTo(44, 44);
+    gfx.lineTo(24, 38);
+    gfx.closePath();
+    gfx.fill();
+    gfx.stroke();
+
+    // Cabeza con cresta azul oscura
+    gfx.fillStyle(0x023e8a, 1);
+    gfx.fillCircle(62, 22, 18);
+    gfx.strokeCircle(62, 22, 18);
+
+    // Cresta superior de plumas
+    gfx.fillTriangle(52, 6, 62, 2, 58, 12);
+    gfx.fillTriangle(60, 4, 70, 4, 66, 12);
+
+    // Gran pico naranja daga afilado hacia adelante
+    gfx.fillStyle(0xf77f00, 1);
+    gfx.beginPath();
+    gfx.moveTo(76, 18);
+    gfx.lineTo(95, 26);
+    gfx.lineTo(74, 32);
+    gfx.closePath();
+    gfx.fill();
+    gfx.stroke();
+
+    // Ojo feroz con resplandor dorado
+    gfx.fillStyle(0xffea00, 1);
+    gfx.fillCircle(66, 20, 6.5);
+    gfx.strokeCircle(66, 20, 6.5);
+    gfx.fillStyle(0xd90429, 1);
+    gfx.fillCircle(67, 20, 3.5);
+    gfx.fillStyle(0xffffff, 1);
+    gfx.fillCircle(66, 18, 1.8);
+
+    gfx.generateTexture('boss_kingfisher', 96, 64);
+
     gfx.destroy();
   }
 }

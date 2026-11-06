@@ -7,6 +7,7 @@ import { EventBus } from '../core/events/EventBus';
 import { BaseFood } from '../entities/food/BaseFood';
 import { PHASE_CONFIGURATIONS } from '../config/evolutionConfig';
 import { PredatorFish, HunterFrog } from '../entities/predators/PredatorEntities';
+import { BossKingfisher } from '../entities/boss/BossKingfisher';
 import { SoundSystem } from '../core/audio/SoundSystem';
 import { ParticleSystem } from '../core/particles/ParticleSystem';
 
@@ -18,7 +19,8 @@ export const WORLD_HEIGHT = 2400;
  * Integra nivel de manglar vertical por estratos, estética enriquecida estilo Kirby,
  * soporte de control universal (Teclado Phaser + DOM listeners + Clic/Touch), HUD dinámico,
  * minimapa / altímetro vertical de estratos en tiempo real,
- * soporte multinivel con depredadores, habilidades activas por fase (Shift / Clic derecho),
+ * soporte multinivel con depredadores y Jefe Final (Martín Pescador Gigante),
+ * habilidades activas por fase (Shift / Clic derecho),
  * sintetizador procedural Web Audio API y sistema global de partículas.
  */
 export class GameScene extends Phaser.Scene {
@@ -29,6 +31,14 @@ export class GameScene extends Phaser.Scene {
   public foodGroup!: Phaser.GameObjects.Group;
   public predatorGroup!: Phaser.GameObjects.Group;
   public waterZone!: Phaser.GameObjects.Zone;
+
+  // Jefe Final (Nivel 2)
+  public boss: BossKingfisher | null = null;
+  public bossFightActive: boolean = false;
+  private bossHealthContainer: Phaser.GameObjects.Container | null = null;
+  private bossHealthBarFill!: Phaser.GameObjects.Rectangle;
+  private bossHealthText!: Phaser.GameObjects.Text;
+  private bossAlertBanner: Phaser.GameObjects.Container | null = null;
 
   // Sistemas globales de Audio y Partículas
   public soundSystem: SoundSystem = SoundSystem.getInstance();
@@ -218,7 +228,7 @@ export class GameScene extends Phaser.Scene {
     // 1. Knockback y parpadeo rojo de daño
     this.player.takeDamage(attackerX, attackerY);
 
-    // 2. Penalización de 15% de evolución
+    // 2. Penalización de 15% de evolución (sin bajar de fase evolutiva)
     this.evolutionManager.penalizeProgress(15);
   }
 
@@ -315,8 +325,8 @@ export class GameScene extends Phaser.Scene {
   private executeTadpoleSubaquaticDash(): void {
     const dirX = this.player.facingDirection;
     const currentVy = this.player.body.velocity.y;
+    this.player.startDash(350);
     this.player.setVelocity(dirX * 720, currentVy * 0.5);
-    (this.player as any).invulnerableTimer = 25; // Inmunidad durante el impulso
     this.player.triggerSquashAndStretch(1.6, 0.6, 250);
 
     // Estela de burbujas blancas
@@ -349,8 +359,9 @@ export class GameScene extends Phaser.Scene {
     const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY);
     const speed = 920;
 
+    // Activar estado de embestida para combate con el Jefe
+    this.player.startDash(380);
     this.player.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-    (this.player as any).invulnerableTimer = 25;
     this.player.triggerSquashAndStretch(1.7, 0.6, 220);
 
     // Estela de luz verde/cian
@@ -370,6 +381,288 @@ export class GameScene extends Phaser.Scene {
         });
       });
     }
+  }
+
+  // ==========================================
+  // JEFE FINAL (NIVEL 2: MARTÍN PESCADOR GIGANTE)
+  // ==========================================
+
+  public startBossFight(): void {
+    if (this.bossFightActive || this.boss) return;
+    this.bossFightActive = true;
+
+    // 1. Sonido grave de alerta
+    this.soundSystem.playBossAlert();
+
+    // 2. Banner de alerta en pantalla
+    this.showBossAlertBanner();
+
+    // 3. Instanciar al Jefe Final en el Dosel Aéreo (y = 300)
+    this.boss = new BossKingfisher(this, 640, 300);
+
+    // 4. Barra de vida del Jefe en el HUD superior central
+    this.createBossHealthBar();
+
+    // 5. Registrar colisión y combate entre Jugador y Jefe
+    this.physics.add.overlap(this.player, this.boss, () => {
+      if (!this.bossFightActive || !this.boss || this.boss.hp <= 0) return;
+
+      if (this.player.isDashing) {
+        // Golpe exitoso de embestida supersónica
+        if (!this.boss.isInvulnerable()) {
+          const remainingHp = this.boss.takeDamage(1);
+          this.soundSystem.playBossHit();
+          this.particleSystem.emitBossHitParticles(this.boss.x, this.boss.y);
+          this.updateBossHealthBar();
+
+          if (remainingHp <= 0) {
+            this.handleBossDefeated();
+          }
+        }
+      } else {
+        // Impacto del jefe sobre el jugador sin embestida
+        this.handleTrophicDamage(this.boss as unknown as Phaser.GameObjects.GameObject);
+      }
+    });
+  }
+
+  private showBossAlertBanner(): void {
+    if (this.bossAlertBanner) {
+      this.bossAlertBanner.destroy();
+    }
+
+    const banner = this.add.container(640, 160).setScrollFactor(0).setDepth(800);
+    this.bossAlertBanner = banner;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x370617, 0.94);
+    bg.fillRoundedRect(-320, -28, 640, 56, 14);
+    bg.lineStyle(2.5, 0xff0054, 1);
+    bg.strokeRoundedRect(-320, -28, 640, 56, 14);
+    banner.add(bg);
+
+    const text = this.add.text(0, 0, '⚠️ ¡ALERTA: MARTÍN PESCADOR GIGANTE EN EL DOSEL! ⚠️', {
+      fontFamily: 'sans-serif',
+      fontSize: '17px',
+      color: '#ffd166',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    banner.add(text);
+
+    // Animación de entrada y desvanecimiento progresivo
+    banner.setScale(0.7);
+    banner.setAlpha(0);
+    this.tweens.add({
+      targets: banner,
+      scaleX: 1,
+      scaleY: 1,
+      alpha: 1,
+      duration: 350,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.time.delayedCall(3200, () => {
+          if (this.bossAlertBanner) {
+            this.tweens.add({
+              targets: this.bossAlertBanner,
+              alpha: 0,
+              y: 120,
+              duration: 400,
+              onComplete: () => {
+                this.bossAlertBanner?.destroy();
+                this.bossAlertBanner = null;
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  private createBossHealthBar(): void {
+    if (this.bossHealthContainer) {
+      this.bossHealthContainer.destroy();
+    }
+
+    const container = this.add.container(640, 75).setScrollFactor(0).setDepth(650);
+    this.bossHealthContainer = container;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1a0509, 0.9);
+    bg.fillRoundedRect(-170, -18, 340, 48, 10);
+    bg.lineStyle(2, 0xd90429, 0.9);
+    bg.strokeRoundedRect(-170, -18, 340, 48, 10);
+    container.add(bg);
+
+    const title = this.add.text(0, -6, '👑 MARTÍN PESCADOR GIGANTE (JEFE)', {
+      fontFamily: 'sans-serif',
+      fontSize: '12px',
+      color: '#ffd166',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    container.add(title);
+
+    // Fondo barra
+    const barBg = this.add.rectangle(0, 14, 300, 12, 0x370617).setOrigin(0.5);
+    container.add(barBg);
+
+    // Relleno barra
+    this.bossHealthBarFill = this.add.rectangle(-150, 14, 300, 10, 0xd90429).setOrigin(0, 0.5);
+    container.add(this.bossHealthBarFill);
+
+    this.bossHealthText = this.add.text(0, 14, '5 / 5 HP', {
+      fontFamily: 'sans-serif',
+      fontSize: '10px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    container.add(this.bossHealthText);
+
+    // Entrada animada
+    container.setScale(0);
+    this.tweens.add({
+      targets: container,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 300,
+      ease: 'Back.easeOut'
+    });
+  }
+
+  private updateBossHealthBar(): void {
+    if (!this.boss || !this.bossHealthBarFill || !this.bossHealthText) return;
+
+    const ratio = Math.max(0, this.boss.hp / this.boss.maxHp);
+    this.tweens.add({
+      targets: this.bossHealthBarFill,
+      scaleX: ratio,
+      duration: 180,
+      ease: 'Quad.easeOut'
+    });
+    this.bossHealthText.setText(`${this.boss.hp} / ${this.boss.maxHp} HP`);
+  }
+
+  public handleBossDefeated(): void {
+    if (!this.boss) return;
+    this.bossFightActive = false;
+
+    // 1. SFX triunfal de victoria definitiva
+    this.soundSystem.playBossDefeated();
+
+    // 2. Gran explosión radial de partículas
+    this.particleSystem.emitBossDefeatParticles(this.boss.x, this.boss.y);
+
+    // 3. Ocultar barra de salud
+    if (this.bossHealthContainer) {
+      this.tweens.add({
+        targets: this.bossHealthContainer,
+        alpha: 0,
+        scaleY: 0,
+        duration: 300,
+        onComplete: () => {
+          this.bossHealthContainer?.destroy();
+          this.bossHealthContainer = null;
+        }
+      });
+    }
+
+    // 4. Animación de derrota del jefe y destrucción
+    this.tweens.add({
+      targets: this.boss,
+      alpha: 0,
+      scaleX: 0.1,
+      scaleY: 0.1,
+      angle: 360,
+      duration: 650,
+      onComplete: () => {
+        this.boss?.destroy();
+        this.boss = null;
+        // Mostrar Modal de Victoria Definitiva
+        this.showUltimateVictoryModal();
+      }
+    });
+  }
+
+  public showUltimateVictoryModal(): void {
+    if (this.victoryModal) {
+      this.victoryModal.destroy();
+    }
+
+    const modal = this.add.container(640, 360).setScrollFactor(0).setDepth(1000);
+    this.victoryModal = modal;
+
+    // Overlay oscuro
+    const overlay = this.add.rectangle(0, 0, 1280, 720, 0x000000, 0.75);
+    overlay.setInteractive();
+    modal.add(overlay);
+
+    // Marco épico de victoria
+    const box = this.add.graphics();
+    box.fillStyle(0x0a1c13, 0.96);
+    box.fillRoundedRect(-300, -190, 600, 380, 20);
+    box.lineStyle(4, 0xffd166, 1);
+    box.strokeRoundedRect(-300, -190, 600, 380, 20);
+    modal.add(box);
+
+    const title = this.add.text(0, -130, '👑 ¡DEPREDADOR ALFA DERROTADO! 👑', {
+      fontFamily: 'sans-serif',
+      fontSize: '23px',
+      color: '#ffd166',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    modal.add(title);
+
+    const subtitle = this.add.text(0, -60, '¡Has derrotado al temible Martín Pescador Gigante en el Dosel Aéreo!\n¡Eres el Amo Absoluto del Manglar y la cúspide evolutiva total!', {
+      fontFamily: 'sans-serif',
+      fontSize: '15px',
+      color: '#d8f3dc',
+      align: 'center',
+      lineSpacing: 8
+    }).setOrigin(0.5);
+    modal.add(subtitle);
+
+    // Botón principal: Reiniciar Nivel 2
+    const btnWidth = 360;
+    const btnHeight = 52;
+    const btnBg = this.add.graphics();
+    btnBg.fillStyle(0x1b4332, 1);
+    btnBg.fillRoundedRect(-btnWidth / 2, 20, btnWidth, btnHeight, 12);
+    btnBg.lineStyle(2.5, 0x52b788, 1);
+    btnBg.strokeRoundedRect(-btnWidth / 2, 20, btnWidth, btnHeight, 12);
+    modal.add(btnBg);
+
+    const btnText = this.add.text(0, 46, '🔄 Volver a Desafiar el Nivel 2', {
+      fontFamily: 'sans-serif',
+      fontSize: '16px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    modal.add(btnText);
+
+    const btnHit = this.add.zone(0, 46, btnWidth, btnHeight).setInteractive({ useHandCursor: true });
+    btnHit.on('pointerdown', () => {
+      this.startLevel(2);
+    });
+    modal.add(btnHit);
+
+    // Botón secundario: Volver a Nivel 1
+    const btnSec = this.add.text(0, 125, '🌱 Explorar Nivel 1 (Pacífico)', {
+      fontFamily: 'sans-serif',
+      fontSize: '14px',
+      color: '#95d5b2'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btnSec.on('pointerdown', () => {
+      this.startLevel(1);
+    });
+    modal.add(btnSec);
+
+    modal.setScale(0);
+    this.tweens.add({
+      targets: modal,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 380,
+      ease: 'Back.easeOut'
+    });
   }
 
   private createAtmosphericBackground(): void {
@@ -743,9 +1036,8 @@ export class GameScene extends Phaser.Scene {
         return null;
       });
 
-      if ((this as any).boss && (this as any).boss.active) {
-        const boss = (this as any).boss;
-        const ratio = Phaser.Math.Clamp(boss.y / WORLD_HEIGHT, 0, 1);
+      if (this.boss && this.boss.active) {
+        const ratio = Phaser.Math.Clamp(this.boss.y / WORLD_HEIGHT, 0, 1);
         const dotY = y + ratio * h;
         this.minimapDynamicGfx.fillStyle(0xff0054, 1);
         this.minimapDynamicGfx.fillCircle(x + w / 2, dotY, 4.5);
@@ -776,6 +1068,21 @@ export class GameScene extends Phaser.Scene {
     if (this.victoryModal) {
       this.victoryModal.destroy();
       this.victoryModal = null;
+    }
+
+    // Limpieza de Jefe Final si existía
+    if (this.boss) {
+      this.boss.destroy();
+      this.boss = null;
+    }
+    this.bossFightActive = false;
+    if (this.bossHealthContainer) {
+      this.bossHealthContainer.destroy();
+      this.bossHealthContainer = null;
+    }
+    if (this.bossAlertBanner) {
+      this.bossAlertBanner.destroy();
+      this.bossAlertBanner = null;
     }
 
     // Reiniciar al jugador a Fase 1 (Hongo del Manglar en y = 1450, evolución 0%)
@@ -982,7 +1289,15 @@ export class GameScene extends Phaser.Scene {
 
     EventBus.on('evolution:completed', () => {
       this.phaseText.setText('¡Evolución Cúspide: Libélula!');
-      this.showVictoryModal();
+      if (this.currentLevel === 1) {
+        // En Nivel 1: Victoria directa con opción a Nivel 2
+        this.showVictoryModal();
+      } else {
+        // En Nivel 2: Iniciar enfrentamiento con el Jefe Final en el Dosel
+        if (!this.bossFightActive && !this.boss) {
+          this.startBossFight();
+        }
+      }
     });
   }
 
@@ -1078,12 +1393,17 @@ export class GameScene extends Phaser.Scene {
     this.player.handleInput(inputState, delta);
     this.player.update(time, delta);
 
-    // 6. Seguimiento suave vertical con cameraY
+    // 6. Actualizar al Jefe Final si está activo
+    if (this.boss && this.bossFightActive) {
+      this.boss.updateBoss(delta, this.player.x, this.player.y);
+    }
+
+    // 7. Seguimiento suave vertical con cameraY
     const targetCameraY = Math.max(0, Math.min(WORLD_HEIGHT - this.scale.height, this.player.y - this.scale.height / 2));
     this.cameraY = Phaser.Math.Linear(this.cameraY, targetCameraY, 0.08);
     this.cameras.main.scrollY = this.cameraY;
 
-    // 7. Actualizar Minimapa / Altímetro de estratos en tiempo real
+    // 8. Actualizar Minimapa / Altímetro de estratos en tiempo real
     this.updateMinimap();
   }
 

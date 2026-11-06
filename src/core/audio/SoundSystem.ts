@@ -191,4 +191,103 @@ export class SoundSystem {
       // Audio seguro
     }
   }
+
+  /**
+   * Alerta grave de Jefe Final (playBossAlert): Sirena/pulso grave de advertencia en el dosel.
+   */
+  public playBossAlert(): void {
+    if (this.isMuted) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      // Dos pulsos graves oscilantes (120Hz -> 85Hz)
+      [0, 0.28].forEach((offset) => {
+        const t = now + offset;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(125, t);
+        osc.frequency.exponentialRampToValueAtTime(80, t + 0.25);
+
+        gain.gain.setValueAtTime(0.28, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(t);
+        osc.stop(t + 0.25);
+      });
+    } catch {
+      // Audio seguro
+    }
+  }
+
+  /**
+   * Golpe al Jefe Final (playBossHit): Impacto contundente con crujido.
+   */
+  public playBossHit(): void {
+    if (this.isMuted) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(65, now + 0.15);
+
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch {
+      // Audio seguro
+    }
+  }
+
+  /**
+   * Jefe derrotado (playBossDefeated): Acorde triunfal extendido y fanfarria mayor majestuosa.
+   */
+  public playBossDefeated(): void {
+    if (this.isMuted) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      // Arpegio triunfal C4 -> E4 -> G4 -> B4 -> C5 -> E5 -> G5
+      const notes = [261.63, 329.63, 392.00, 493.88, 523.25, 659.25, 783.99];
+      const now = ctx.currentTime;
+
+      notes.forEach((freq, idx) => {
+        const noteTime = now + idx * 0.14;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, noteTime);
+
+        gain.gain.setValueAtTime(0.22, noteTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.45);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(noteTime);
+        osc.stop(noteTime + 0.45);
+      });
+    } catch {
+      // Audio seguro
+    }
+  }
 }
