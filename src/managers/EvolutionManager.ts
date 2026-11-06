@@ -11,6 +11,7 @@ import { PlayerStateMachine } from '../core/state-machine/PlayerStateMachine';
  * - Filtra presas según la dieta de la fase actual.
  * - Calcula el porcentaje de alimentación (0 - 100%).
  * - Dispara la metamorfosis al alcanzar el 100%.
+ * - Aplica penalizaciones por daño trófico en niveles hostiles.
  */
 export class EvolutionManager implements IEvolutionManager {
   private _currentPhase: EvolutionPhase;
@@ -78,6 +79,21 @@ export class EvolutionManager implements IEvolutionManager {
     }
 
     return true;
+  }
+
+  /**
+   * Aplica una penalización porcentual a la barra de evolución (por daño de depredadores).
+   */
+  public penalizeProgress(percentAmount: number = 15): void {
+    const required = PHASE_CONFIGURATIONS[this._currentPhase].foodRequired;
+    const currentPercent = (this._currentFoodCount / required) * 100;
+    const newPercent = Math.max(0, currentPercent - percentAmount);
+    this._currentFoodCount = (newPercent / 100) * required;
+
+    EventBus.emit('evolution:progress', {
+      progress: Math.round(newPercent),
+      targetFood: this.targetFood
+    });
   }
 
   /**

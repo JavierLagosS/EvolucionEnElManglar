@@ -17,12 +17,12 @@ export abstract class BaseFood extends Phaser.GameObjects.Container implements I
   private _isActive: boolean = true;
 
   // Variables para movimiento sinusoidal orgánico
-  protected baseX: number;
-  protected baseY: number;
-  protected timeOffset: number;
-  protected floatSpeed: number = 0.003;
-  protected floatAmplitudeY: number = 6;
-  protected floatAmplitudeX: number = 3;
+  public baseX: number;
+  public baseY: number;
+  public timeOffset: number;
+  public floatSpeed: number = 0.003;
+  public floatAmplitudeY: number = 6;
+  public floatAmplitudeX: number = 3;
 
   constructor(scene: Phaser.Scene, x: number, y: number, textureKey: string, hitboxRadius: number = 14) {
     super(scene, x, y);

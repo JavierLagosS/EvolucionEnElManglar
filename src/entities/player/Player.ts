@@ -6,6 +6,7 @@ import { MushroomState } from './states/MushroomState';
 import { TadpoleState } from './states/TadpoleState';
 import { FrogState } from './states/FrogState';
 import { DragonflyState } from './states/DragonflyState';
+import { EventBus } from '../../core/events/EventBus';
 
 /**
  * Entidad principal del Jugador.
@@ -24,6 +25,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   private _facingDirection: 1 | -1 = 1;
   private squashTween: Phaser.Tweens.Tween | null = null;
   private groundedGraceTimer: number = 0;
+  private invulnerableTimer: number = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // Inicializar el cuerpo físico nativo en Arcade
@@ -70,7 +72,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     return this._facingDirection;
   }
 
-  public markGrounded(graceMs: number = 150): void {
+  public markGrounded(graceMs: number = 160): void {
     this.groundedGraceTimer = graceMs;
   }
 
@@ -146,6 +148,41 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     }
   }
 
+  public clearVisualTint(): void {
+    this.visualSprite.clearTint();
+  }
+
+  public isInvulnerable(): boolean {
+    return this.invulnerableTimer > 0;
+  }
+
+  public takeDamage(fromX: number, _fromY: number): void {
+    if (this.invulnerableTimer > 0) return;
+    this.invulnerableTimer = 60; // 60 frames (~1000ms de invulnerabilidad)
+
+    // Knockback: alejar al jugador con fuerza del depredador
+    const dirX = this.x >= fromX ? 1 : -1;
+    this.setVelocity(dirX * 360, -320);
+
+    // Feedback visual: Squash & Stretch y parpadeo rojo brillante
+    this.triggerSquashAndStretch(0.7, 1.4, 180);
+    this.setVisualTint(0xff1e1e);
+
+    this.scene.tweens.add({
+      targets: this.visualSprite,
+      alpha: 0.25,
+      yoyo: true,
+      repeat: 5,
+      duration: 80,
+      onComplete: () => {
+        this.visualSprite.setAlpha(1);
+        this.clearVisualTint();
+      }
+    });
+
+    EventBus.emit('player:damaged', { x: this.x, y: this.y });
+  }
+
   public setInWater(inWater: boolean): void {
     if (this._isInWater !== inWater) {
       this._isInWater = inWater;
@@ -166,6 +203,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   public override update(time: number, delta: number): void {
     if (this.groundedGraceTimer > 0) {
       this.groundedGraceTimer -= delta;
+    }
+
+    if (this.invulnerableTimer > 0) {
+      this.invulnerableTimer -= (delta / 16.666);
+      if (this.invulnerableTimer <= 0) {
+        this.invulnerableTimer = 0;
+        this.clearVisualTint();
+        this.visualSprite.setAlpha(1);
+      }
     }
 
     // Sincronizar el sprite visual con la posición del cuerpo físico

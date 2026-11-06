@@ -14,6 +14,7 @@ export class FoodManager {
   private readonly evolutionManager: EvolutionManager;
   private readonly foodGroup: Phaser.GameObjects.Group;
   private respawnTimer?: Phaser.Time.TimerEvent;
+  private currentLevel: number = 1;
 
   constructor(scene: Phaser.Scene, evolutionManager: EvolutionManager, foodGroup: Phaser.GameObjects.Group) {
     this.scene = scene;
@@ -22,6 +23,16 @@ export class FoodManager {
 
     this.spawnInitialEcosystem();
     this.startPeriodicSpawner();
+  }
+
+  public setLevel(level: number): void {
+    this.currentLevel = level;
+    this.foodGroup.clear(true, true);
+    this.spawnInitialEcosystem();
+  }
+
+  public getLevel(): number {
+    return this.currentLevel;
   }
 
   /**
@@ -160,6 +171,12 @@ export class FoodManager {
   }
 
   public spawn(food: BaseFood): void {
+    // Si estamos en Nivel 2, acelerar el movimiento y amplitud de las criaturas
+    if (this.currentLevel === 2) {
+      food.floatSpeed *= 1.6;
+      food.floatAmplitudeX *= 1.35;
+      food.floatAmplitudeY *= 1.35;
+    }
     this.foodGroup.add(food);
   }
 
