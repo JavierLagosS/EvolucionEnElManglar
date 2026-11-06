@@ -7,15 +7,18 @@ import { EventBus } from '../core/events/EventBus';
 import { BaseFood } from '../entities/food/BaseFood';
 import { PHASE_CONFIGURATIONS } from '../config/evolutionConfig';
 import { PredatorFish, HunterFrog } from '../entities/predators/PredatorEntities';
+import { SoundSystem } from '../core/audio/SoundSystem';
+import { ParticleSystem } from '../core/particles/ParticleSystem';
 
 export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 2400;
 
 /**
  * Escena principal de "Evolución en el Manglar".
- * Integra nivel de manglar accesible, estética enriquecida estilo Kirby,
+ * Integra nivel de manglar vertical por estratos, estética enriquecida estilo Kirby,
  * soporte de control universal (Teclado Phaser + DOM listeners + Clic/Touch), HUD dinámico,
- * soporte multinivel con depredadores y habilidades activas por fase (Shift / Clic derecho).
+ * soporte multinivel con depredadores, habilidades activas por fase (Shift / Clic derecho),
+ * sintetizador procedural Web Audio API y sistema global de partículas.
  */
 export class GameScene extends Phaser.Scene {
   public player!: Player;
@@ -25,6 +28,10 @@ export class GameScene extends Phaser.Scene {
   public foodGroup!: Phaser.GameObjects.Group;
   public predatorGroup!: Phaser.GameObjects.Group;
   public waterZone!: Phaser.GameObjects.Zone;
+
+  // Sistemas globales de Audio y Partículas
+  public soundSystem: SoundSystem = SoundSystem.getInstance();
+  public particleSystem!: ParticleSystem;
 
   // Estado de Nivel y Modal de Victoria
   public currentLevel: number = 1;
@@ -85,6 +92,9 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
+    // Inicializar sistema de partículas
+    this.particleSystem = new ParticleSystem(this);
+
     // 1. Fondos vibrantes e iluminación atmosférica
     this.createAtmosphericBackground();
 
@@ -144,6 +154,8 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.waterZone, () => {
       if (!this.player.isInWater) {
         this.player.setInWater(true);
+        this.soundSystem.playSplash();
+        this.particleSystem.emitSplashParticles(this.player.x, 1550);
       }
     });
 
@@ -163,7 +175,14 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
-      this.evolutionManager.feed(food);
+      const foodX = food.x;
+      const foodY = food.y;
+      const foodType = food.type;
+      const consumed = this.evolutionManager.feed(food);
+      if (consumed) {
+        this.soundSystem.playEat();
+        this.particleSystem.emitEatParticles(foodX, foodY, foodType);
+      }
     });
 
     // Overlap jugador vs depredadores patrullando en Nivel 2
@@ -182,6 +201,9 @@ export class GameScene extends Phaser.Scene {
 
     const attackerX = (attacker as any).x ?? this.player.x;
     const attackerY = (attacker as any).y ?? this.player.y;
+
+    // SFX de daño y knockback
+    this.soundSystem.playHurt();
 
     // 1. Knockback y parpadeo rojo de daño
     this.player.takeDamage(attackerX, attackerY);
@@ -216,6 +238,8 @@ export class GameScene extends Phaser.Scene {
   public triggerPlayerAbility(): boolean {
     if (this.abilityCooldownTimer > 0) return false;
     this.abilityCooldownTimer = this.ABILITY_COOLDOWN_MS;
+
+    this.soundSystem.playAbility();
 
     const currentPhase = this.evolutionManager.currentPhase;
     switch (currentPhase) {
@@ -511,6 +535,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setupInput(): void {
+    // Desbloquear AudioContext en la primera interacción (Autoplay policy)
+    const unlockAudio = () => {
+      this.soundSystem.getAudioContext();
+    };
+    window.addEventListener('keydown', unlockAudio, { once: true });
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
+
     if (this.input.keyboard) {
       this.cursors = this.input.keyboard.createCursorKeys();
       this.wasd = {
@@ -524,6 +555,7 @@ export class GameScene extends Phaser.Scene {
 
     // Respaldo global por DOM para movimiento y Habilidad (Shift)
     window.addEventListener('keydown', (e) => {
+      this.soundSystem.resume();
       const k = e.key.toLowerCase();
       if (k === 'arrowleft' || k === 'a') {
         if (!this.rawKeys.left) this.rawKeys.leftJustDown = true;
@@ -552,11 +584,13 @@ export class GameScene extends Phaser.Scene {
     // Clic Derecho para Habilidad (con preventDefault)
     window.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      this.soundSystem.resume();
       this.triggerPlayerAbility();
     });
 
     // Soporte para Clic de Ratón y Pantalla Táctil con soporte de cámara vertical
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.soundSystem.resume();
       if (pointer.rightButtonDown()) {
         this.triggerPlayerAbility();
         return;
@@ -834,6 +868,8 @@ export class GameScene extends Phaser.Scene {
       this.phaseText.setText(`Fase: ${phaseInfo.displayName}`);
       this.targetFoodText.setText(`Dieta actual: ${this.getFoodLabel(data.targetFood)}`);
       this.cameras.main.flash(350, 255, 255, 255);
+      this.soundSystem.playEvolve();
+      this.particleSystem.emitEvolutionParticles(this.player.x, this.player.y);
     });
 
     EventBus.on('evolution:completed', () => {
@@ -856,6 +892,8 @@ export class GameScene extends Phaser.Scene {
     const inAquaticStratum = this.player.y > 1550 || this.physics.overlap(this.player, this.waterZone);
     if (inAquaticStratum !== this.player.isInWater) {
       this.player.setInWater(inAquaticStratum);
+      this.soundSystem.playSplash();
+      this.particleSystem.emitSplashParticles(this.player.x, 1550);
     }
 
     // 2. Renderizado dinámico de la ondulación del agua

@@ -13,6 +13,8 @@ export interface GameEventsMap {
   'food:consumed': { type: FoodType; nutritionalValue: number; accepted: boolean };
   'player:jump': { phase: EvolutionPhase; x: number; y: number };
   'player:land': { phase: EvolutionPhase; x: number; y: number };
+  'player:damaged': { x: number; y: number; attackerX?: number; attackerY?: number };
+  'ability:used': { phase: EvolutionPhase; x: number; y: number };
 }
 
 /**
