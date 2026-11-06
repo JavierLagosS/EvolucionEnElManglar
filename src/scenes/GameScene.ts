@@ -78,11 +78,11 @@ export class GameScene extends Phaser.Scene {
     // 3. Plataformas escalonadas y suelo
     this.createPlatforms();
 
-    // 4. Zona y Estanque Acuático
+    // 4. Zona y Estanque Acuático Continuo (Estrato 3: y = 1550 a 2400)
     this.createWaterBasin();
 
-    // 5. Instanciar Jugador
-    this.player = new Player(this, 100, 630);
+    // 5. Instanciar Jugador en Estrato 2 (Suelo del Manglar: y = 1450)
+    this.player = new Player(this, 120, 1450);
 
     // Inicializar posición de cámara sobre el jugador
     const targetCameraY = Math.max(0, Math.min(WORLD_HEIGHT - this.scale.height, this.player.y - this.scale.height / 2));
@@ -138,63 +138,87 @@ export class GameScene extends Phaser.Scene {
   private createAtmosphericBackground(): void {
     const bgGfx = this.add.graphics();
 
-    bgGfx.fillGradientStyle(0x06201b, 0x0a2f26, 0x144534, 0x1d5e46, 1);
-    bgGfx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    // ESTRATO 1: Dosel Aéreo (y: 0 a 800) - Cielo suave de manglar con iluminación dorada
+    bgGfx.fillGradientStyle(0x13382c, 0x1d5e46, 0x0f4030, 0x0a2f25, 1);
+    bgGfx.fillRect(0, 0, WORLD_WIDTH, 800);
 
-    // Siluetas lejanas con niebla
-    bgGfx.fillStyle(0x0e362b, 0.45);
+    // ESTRATO 2: Suelo del Manglar y Raíces (y: 800 a 1600) - Bosque denso y raíces
+    bgGfx.fillGradientStyle(0x0a2f25, 0x07221b, 0x051a14, 0x03120f, 1);
+    bgGfx.fillRect(0, 800, WORLD_WIDTH, 800);
+
+    // ESTRATO 3: Mundo Acuático Profundo (y: 1550 a 2400) - Abismo subacuático
+    bgGfx.fillGradientStyle(0x04324f, 0x032238, 0x021929, 0x010f1a, 1);
+    bgGfx.fillRect(0, 1550, WORLD_WIDTH, 850);
+
+    // Siluetas lejanas del dosel y árboles (Estrato 1 y 2)
+    bgGfx.fillStyle(0x0e362b, 0.4);
     for (let i = 0; i < 7; i++) {
       const x = i * 210 + 30;
-      bgGfx.fillRect(x, 260, 40, 460);
-      bgGfx.fillCircle(x + 20, 240, 90);
-      bgGfx.fillCircle(x - 20, 260, 70);
-      bgGfx.fillCircle(x + 60, 260, 75);
+      // Troncos en estrato medio
+      bgGfx.fillRect(x, 600, 44, 950);
+      // Follaje en dosel
+      bgGfx.fillCircle(x + 22, 540, 100);
+      bgGfx.fillCircle(x - 20, 580, 80);
+      bgGfx.fillCircle(x + 65, 580, 85);
+
+      // Copas superiores en Estrato 1
+      bgGfx.fillCircle(x + 20, 220, 120);
+      bgGfx.fillCircle(x - 30, 260, 90);
+      bgGfx.fillCircle(x + 70, 260, 95);
     }
 
-    // Raíces zancudas entrelazadas
+    // Raíces zancudas entrelazadas en Estrato 2 bajando hacia el agua
     bgGfx.fillStyle(0x08251e, 0.7);
     for (let i = 0; i < 9; i++) {
       const rx = i * 150 + 20;
       bgGfx.beginPath();
-      bgGfx.moveTo(rx, 420);
-      bgGfx.lineTo(rx - 35, 720);
-      bgGfx.lineTo(rx - 15, 720);
-      bgGfx.lineTo(rx + 25, 420);
+      bgGfx.moveTo(rx, 1100);
+      bgGfx.lineTo(rx - 45, 1550);
+      bgGfx.lineTo(rx - 20, 1550);
+      bgGfx.lineTo(rx + 25, 1100);
       bgGfx.closePath();
       bgGfx.fill();
 
       bgGfx.beginPath();
-      bgGfx.moveTo(rx + 25, 420);
-      bgGfx.lineTo(rx + 60, 720);
-      bgGfx.lineTo(rx + 40, 720);
-      bgGfx.lineTo(rx, 420);
+      bgGfx.moveTo(rx + 25, 1100);
+      bgGfx.lineTo(rx + 70, 1550);
+      bgGfx.lineTo(rx + 45, 1550);
+      bgGfx.lineTo(rx, 1100);
       bgGfx.closePath();
       bgGfx.fill();
     }
 
-    // Haz de luz solar que penetra el dosel
+    // Rocas y siluetas submarinas en Estrato 3
+    bgGfx.fillStyle(0x021724, 0.65);
+    for (let i = 0; i < 6; i++) {
+      const bx = i * 230 + 40;
+      bgGfx.fillCircle(bx + 40, 2350, 70);
+      bgGfx.fillCircle(bx + 90, 2360, 50);
+    }
+
+    // Haz de luz solar que penetra el dosel superior
     const sunbeam = this.add.graphics();
-    sunbeam.fillStyle(0xfefae0, 0.06);
+    sunbeam.fillStyle(0xfefae0, 0.05);
     sunbeam.beginPath();
     sunbeam.moveTo(350, 0);
-    sunbeam.lineTo(550, 0);
-    sunbeam.lineTo(750, 720);
-    sunbeam.lineTo(450, 720);
+    sunbeam.lineTo(600, 0);
+    sunbeam.lineTo(850, 1550);
+    sunbeam.lineTo(500, 1550);
     sunbeam.closePath();
     sunbeam.fill();
   }
 
   private createFloatingFireflies(): void {
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < 30; i++) {
       const x = Phaser.Math.Between(40, 1240);
-      const y = Phaser.Math.Between(100, 680);
+      const y = Phaser.Math.Between(120, 1500);
       const particle = this.add.image(x, y, 'firefly_particle');
       particle.setAlpha(Phaser.Math.FloatBetween(0.25, 0.8));
       particle.setScale(Phaser.Math.FloatBetween(0.6, 1.2));
 
       this.tweens.add({
         targets: particle,
-        y: y - Phaser.Math.Between(40, 100),
+        y: y - Phaser.Math.Between(40, 120),
         x: x + Phaser.Math.Between(-30, 30),
         alpha: { from: 0.15, to: 0.85 },
         duration: Phaser.Math.Between(3000, 6000),
@@ -208,47 +232,89 @@ export class GameScene extends Phaser.Scene {
   private createPlatforms(): void {
     this.platforms = this.physics.add.staticGroup();
 
-    // Suelo continuo de raíces
+    // ==========================================
+    // ESTRATO 3: MUNDO ACUÁTICO PROFUNDO (y: 1550 a 2400)
+    // ==========================================
+    // Suelo marino continuo en y = 2360
     for (let x = 80; x <= 1280; x += 160) {
-      this.platforms.create(x, 704, 'mangrove_platform');
+      this.platforms.create(x, 2360, 'mangrove_platform');
     }
 
-    // Escalones de ascenso accesibles
-    this.platforms.create(250, 610, 'mangrove_platform');
-    this.platforms.create(400, 520, 'mangrove_platform');
-    this.platforms.create(550, 430, 'mangrove_platform');
-    this.platforms.create(720, 350, 'mangrove_platform');
-    this.platforms.create(920, 270, 'mangrove_platform');
-    this.platforms.create(1110, 430, 'mangrove_platform');
+    // Rocas y plataformas subacuáticas
+    this.platforms.create(250, 2180, 'mangrove_platform');
+    this.platforms.create(850, 2060, 'mangrove_platform');
+    this.platforms.create(440, 1920, 'mangrove_platform');
+    this.platforms.create(1050, 1800, 'mangrove_platform');
+    this.platforms.create(650, 1680, 'mangrove_platform');
+
+    // ==========================================
+    // ESTRATO 2: SUELO DEL MANGLAR Y RAÍCES (y: 800 a 1600)
+    // ==========================================
+    // Suelo en y = 1550 dejando amplia abertura central (x: 360 a 920) para sumergirse al agua
+    // Orilla izquierda:
+    this.platforms.create(80, 1550, 'mangrove_platform');
+    this.platforms.create(220, 1550, 'mangrove_platform');
+    this.platforms.create(360, 1550, 'mangrove_platform');
+    // Orilla derecha:
+    this.platforms.create(920, 1550, 'mangrove_platform');
+    this.platforms.create(1060, 1550, 'mangrove_platform');
+    this.platforms.create(1200, 1550, 'mangrove_platform');
+
+    // Escalones tipo raíces de manglar para ascender
+    this.platforms.create(220, 1420, 'mangrove_platform');
+    this.platforms.create(380, 1310, 'mangrove_platform');
+    this.platforms.create(560, 1200, 'mangrove_platform');
+    this.platforms.create(750, 1100, 'mangrove_platform');
+    this.platforms.create(940, 1000, 'mangrove_platform');
+    this.platforms.create(1120, 900, 'mangrove_platform');
+    this.platforms.create(780, 830, 'mangrove_platform');
+
+    // ==========================================
+    // ESTRATO 1: DOSEL AÉREO (y: 0 a 800)
+    // ==========================================
+    // Ramas altas espaciadas en el cielo del manglar
+    this.platforms.create(480, 740, 'mangrove_platform');
+    this.platforms.create(200, 650, 'mangrove_platform');
+    this.platforms.create(520, 540, 'mangrove_platform');
+    this.platforms.create(850, 440, 'mangrove_platform');
+    this.platforms.create(1100, 360, 'mangrove_platform');
+    this.platforms.create(650, 260, 'mangrove_platform');
+    this.platforms.create(320, 180, 'mangrove_platform');
   }
 
   private createWaterBasin(): void {
-    this.waterZone = this.add.zone(630, 625, 380, 150);
+    // Zona de colisión del agua a todo lo ancho (x: 0 a 1280, y: 1550 a 2400)
+    this.waterZone = this.add.zone(640, 1975, 1280, 850);
     this.physics.world.enable(this.waterZone, Phaser.Physics.Arcade.STATIC_BODY);
 
+    // Gráficos del agua translúcida a todo el ancho
     const waterDeepGfx = this.add.graphics();
-    waterDeepGfx.fillStyle(0x0077b6, 0.45);
-    waterDeepGfx.fillRoundedRect(440, 550, 380, 150, { tl: 14, tr: 14, bl: 0, br: 0 });
+    waterDeepGfx.fillStyle(0x0077b6, 0.42);
+    waterDeepGfx.fillRect(0, 1550, 1280, 850);
+
+    waterDeepGfx.fillStyle(0x021e33, 0.35);
+    waterDeepGfx.fillRect(0, 2000, 1280, 400);
 
     this.waterSurfaceGfx = this.add.graphics();
 
-    for (let i = 0; i < 8; i++) {
-      const bx = Phaser.Math.Between(460, 800);
-      const by = Phaser.Math.Between(590, 680);
+    // Burbujas dinámicas que suben por todo el estanque submarino
+    for (let i = 0; i < 20; i++) {
+      const bx = Phaser.Math.Between(40, 1240);
+      const by = Phaser.Math.Between(1650, 2350);
       const bubble = this.add.image(bx, by, 'bubble_particle');
-      bubble.setScale(Phaser.Math.FloatBetween(0.6, 1.2));
+      bubble.setScale(Phaser.Math.FloatBetween(0.5, 1.2));
       bubble.setAlpha(0.6);
 
       this.tweens.add({
         targets: bubble,
-        y: 555,
+        y: 1555,
         alpha: { from: 0.6, to: 0.1 },
-        duration: Phaser.Math.Between(1800, 3200),
+        duration: Phaser.Math.Between(2500, 5000),
         repeat: -1,
         ease: 'Quad.easeIn',
         onRepeat: () => {
-          bubble.x = Phaser.Math.Between(460, 800);
-          bubble.y = Phaser.Math.Between(640, 680);
+          bubble.x = Phaser.Math.Between(40, 1240);
+          bubble.y = Phaser.Math.Between(2200, 2380);
         }
       });
     }
@@ -444,14 +510,14 @@ export class GameScene extends Phaser.Scene {
 
   private renderWaterSurface(time: number): void {
     this.waterSurfaceGfx.clear();
-    this.waterSurfaceGfx.lineStyle(2.5, 0x90e0ef, 0.85);
+    this.waterSurfaceGfx.lineStyle(3, 0x90e0ef, 0.9);
 
-    this.waterSurfaceWavePhase = time * 0.004;
+    this.waterSurfaceWavePhase = time * 0.0035;
 
     this.waterSurfaceGfx.beginPath();
-    for (let x = 440; x <= 820; x += 10) {
-      const y = 550 + Math.sin(this.waterSurfaceWavePhase + x * 0.03) * 3.5;
-      if (x === 440) {
+    for (let x = 0; x <= WORLD_WIDTH; x += 15) {
+      const y = 1550 + Math.sin(this.waterSurfaceWavePhase + x * 0.02) * 4;
+      if (x === 0) {
         this.waterSurfaceGfx.moveTo(x, y);
       } else {
         this.waterSurfaceGfx.lineTo(x, y);

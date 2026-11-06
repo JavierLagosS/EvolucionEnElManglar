@@ -25,39 +25,49 @@ export class FoodManager {
   }
 
   /**
-   * Genera la distribución inicial balanceada de presas.
+   * Genera la distribución inicial balanceada de presas en los 3 estratos ecológicos.
    */
   public spawnInitialEcosystem(): void {
-    // FASE 1: Moscas pequeñas (6 unidades distribuidas en suelo y plataformas bajas)
-    this.spawn(new FlyFood(this.scene, 140, 570));
-    this.spawn(new FlyFood(this.scene, 220, 640));
-    this.spawn(new FlyFood(this.scene, 320, 490));
-    this.spawn(new FlyFood(this.scene, 380, 640));
-    this.spawn(new FlyFood(this.scene, 480, 580));
-    this.spawn(new FlyFood(this.scene, 620, 480));
+    // ESTRATO 2 (Suelo y Raíces, y: 800 - 1600): Moscas pequeñas para Fase 1 (Hongo)
+    this.spawn(new FlyFood(this.scene, 160, 1480));
+    this.spawn(new FlyFood(this.scene, 280, 1440));
+    this.spawn(new FlyFood(this.scene, 340, 1370));
+    this.spawn(new FlyFood(this.scene, 460, 1250));
+    this.spawn(new FlyFood(this.scene, 620, 1150));
+    this.spawn(new FlyFood(this.scene, 880, 1030));
+    this.spawn(new FlyFood(this.scene, 980, 1490));
+    this.spawn(new FlyFood(this.scene, 1120, 1460));
 
-    // FASE 2: Peces (6 unidades dentro del estanque de agua)
-    this.spawn(new FishFood(this.scene, 480, 610));
-    this.spawn(new FishFood(this.scene, 550, 640));
-    this.spawn(new FishFood(this.scene, 620, 590));
-    this.spawn(new FishFood(this.scene, 680, 630));
-    this.spawn(new FishFood(this.scene, 740, 600));
-    this.spawn(new FishFood(this.scene, 520, 660));
+    // ESTRATO 3 (Mundo Acuático Profundo, y: 1550 - 2400): Bancos de peces a varias profundidades para Fase 2 (Renacuajo)
+    this.spawn(new FishFood(this.scene, 280, 1680));
+    this.spawn(new FishFood(this.scene, 720, 1690));
+    this.spawn(new FishFood(this.scene, 1050, 1720));
+    this.spawn(new FishFood(this.scene, 200, 1880));
+    this.spawn(new FishFood(this.scene, 580, 1850));
+    this.spawn(new FishFood(this.scene, 880, 1910));
+    this.spawn(new FishFood(this.scene, 350, 2100));
+    this.spawn(new FishFood(this.scene, 750, 2150));
+    this.spawn(new FishFood(this.scene, 1120, 2120));
+    this.spawn(new FishFood(this.scene, 500, 2280));
+    this.spawn(new FishFood(this.scene, 850, 2300));
 
-    // FASE 3: Moscas grandes (5 unidades en plataformas medias y altas)
-    this.spawn(new BigFlyFood(this.scene, 520, 400));
-    this.spawn(new BigFlyFood(this.scene, 720, 330));
-    this.spawn(new BigFlyFood(this.scene, 880, 250));
-    this.spawn(new BigFlyFood(this.scene, 1020, 420));
-    this.spawn(new BigFlyFood(this.scene, 320, 360));
+    // ESTRATO 1 y 2 (Dosel bajo y raíces altas, y: 400 - 1100): Moscas grandes para Fase 3 (Rana)
+    this.spawn(new BigFlyFood(this.scene, 240, 600));
+    this.spawn(new BigFlyFood(this.scene, 500, 690));
+    this.spawn(new BigFlyFood(this.scene, 820, 480));
+    this.spawn(new BigFlyFood(this.scene, 1060, 310));
+    this.spawn(new BigFlyFood(this.scene, 600, 210));
+    this.spawn(new BigFlyFood(this.scene, 360, 370));
+    this.spawn(new BigFlyFood(this.scene, 760, 780));
 
-    // FASE 4: Avispas (6 unidades en el dosel superior / aire)
-    this.spawn(new WaspFood(this.scene, 200, 150));
-    this.spawn(new WaspFood(this.scene, 400, 120));
-    this.spawn(new WaspFood(this.scene, 600, 160));
-    this.spawn(new WaspFood(this.scene, 800, 130));
-    this.spawn(new WaspFood(this.scene, 1000, 140));
-    this.spawn(new WaspFood(this.scene, 1150, 180));
+    // ESTRATO 1 (Dosel Aéreo Superior, y: 0 - 800): Avispas veloces para Fase 4 (Libélula)
+    this.spawn(new WaspFood(this.scene, 180, 140));
+    this.spawn(new WaspFood(this.scene, 360, 110));
+    this.spawn(new WaspFood(this.scene, 560, 160));
+    this.spawn(new WaspFood(this.scene, 780, 120));
+    this.spawn(new WaspFood(this.scene, 960, 150));
+    this.spawn(new WaspFood(this.scene, 1140, 190));
+    this.spawn(new WaspFood(this.scene, 680, 310));
   }
 
   /**
@@ -100,34 +110,37 @@ export class FoodManager {
   }
 
   /**
-   * Genera un alimento en la zona biomecánica correspondiente.
+   * Genera un alimento en la zona biomecánica correspondiente según el estrato.
    */
   private spawnReplenishment(type: FoodType): void {
     let newFood: BaseFood;
 
     switch (type) {
       case FoodType.FLY: {
-        const x = Phaser.Math.Between(150, 750);
-        const y = Phaser.Math.Between(480, 640);
+        // Estrato 2: Suelo y raíces (y: 1150 - 1520)
+        const x = Phaser.Math.Between(120, 1160);
+        const y = Phaser.Math.Between(1150, 1520);
         newFood = new FlyFood(this.scene, x, y);
         break;
       }
       case FoodType.FISH: {
-        // Estanque de agua (x: 460 - 750, y: 580 - 660)
-        const x = Phaser.Math.Between(480, 750);
-        const y = Phaser.Math.Between(580, 660);
+        // Estrato 3: Mundo Acuático Profundo (todo el ancho, y: 1650 - 2320)
+        const x = Phaser.Math.Between(100, 1180);
+        const y = Phaser.Math.Between(1650, 2320);
         newFood = new FishFood(this.scene, x, y);
         break;
       }
       case FoodType.BIG_FLY: {
-        const x = Phaser.Math.Between(300, 1050);
-        const y = Phaser.Math.Between(260, 440);
+        // Estrato 1 bajo y Estrato 2 alto (y: 500 - 1100)
+        const x = Phaser.Math.Between(150, 1150);
+        const y = Phaser.Math.Between(500, 1100);
         newFood = new BigFlyFood(this.scene, x, y);
         break;
       }
       case FoodType.WASP: {
+        // Estrato 1: Dosel Aéreo superior (y: 100 - 450)
         const x = Phaser.Math.Between(150, 1150);
-        const y = Phaser.Math.Between(100, 220);
+        const y = Phaser.Math.Between(100, 450);
         newFood = new WaspFood(this.scene, x, y);
         break;
       }
