@@ -33,8 +33,8 @@ export const PHASE_CONFIGURATIONS: Record<EvolutionPhase, PhaseDefinition> = {
       maxVelocityY: 800,
       bounceX: 0,
       bounceY: 0.05,
-      hitboxWidth: 46,
-      hitboxHeight: 52,
+      hitboxWidth: 44,
+      hitboxHeight: 48,
       hitboxOffsetX: 0,
       hitboxOffsetY: 0
     }
@@ -55,8 +55,8 @@ export const PHASE_CONFIGURATIONS: Record<EvolutionPhase, PhaseDefinition> = {
       maxVelocityY: 320,
       bounceX: 0.2,
       bounceY: 0.2,
-      hitboxWidth: 50,
-      hitboxHeight: 48,
+      hitboxWidth: 48,
+      hitboxHeight: 44,
       hitboxOffsetX: 0,
       hitboxOffsetY: 0
     }
@@ -77,8 +77,8 @@ export const PHASE_CONFIGURATIONS: Record<EvolutionPhase, PhaseDefinition> = {
       maxVelocityY: 820,
       bounceX: 0,
       bounceY: 0.1,
-      hitboxWidth: 52,
-      hitboxHeight: 56,
+      hitboxWidth: 54,
+      hitboxHeight: 50,
       hitboxOffsetX: 0,
       hitboxOffsetY: 0
     }
@@ -99,8 +99,8 @@ export const PHASE_CONFIGURATIONS: Record<EvolutionPhase, PhaseDefinition> = {
       maxVelocityY: 520,
       bounceX: 0.15,
       bounceY: 0.15,
-      hitboxWidth: 58,
-      hitboxHeight: 50,
+      hitboxWidth: 56,
+      hitboxHeight: 48,
       hitboxOffsetX: 0,
       hitboxOffsetY: 0
     }
@@ -121,8 +121,8 @@ export const PHASE_CONFIGURATIONS: Record<EvolutionPhase, PhaseDefinition> = {
       maxVelocityY: 560,
       bounceX: 0.1,
       bounceY: 0.1,
-      hitboxWidth: 72,
-      hitboxHeight: 60,
+      hitboxWidth: 70,
+      hitboxHeight: 56,
       hitboxOffsetX: 0,
       hitboxOffsetY: 0
     }

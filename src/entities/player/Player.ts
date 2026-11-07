@@ -29,6 +29,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   private baseScaleY: number = 1;
   private groundedGraceTimer: number = 0;
   private invulnerableTimer: number = 0;
+  private currentConfig?: PhasePhysicsConfig;
 
   // Estado de impulso / embestida activa
   public isDashing: boolean = false;
@@ -80,6 +81,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   // --- Configuración Dinámica de Físicas Arcade ---
 
   public applyPhysicsConfig(config: PhasePhysicsConfig): void {
+    this.currentConfig = config;
     this.body.setAllowGravity(config.allowGravity);
     this.body.setGravityY(config.gravityY);
     this.body.setDrag(config.dragX, config.dragY);
@@ -115,11 +117,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
 
   public setFacingDirection(dir: 1 | -1): void {
     this._facingDirection = dir;
-    // tiburon.png, libelula.png, avispa.png miran hacia la DERECHA originalmente
-    // pez_naranja.png, pez_celeste.png miran hacia la IZQUIERDA originalmente
+    // rana.png, tiburon.png, libelula.png, avispa.png miran hacia la DERECHA originalmente
+    // pez_celeste.png mira hacia la IZQUIERDA originalmente
     // hongo.png mira de frente (simétrico)
     const phase = this.currentPhase;
-    const looksLeftOriginally = (phase === EvolutionPhase.TADPOLE || phase === EvolutionPhase.FROG);
+    const looksLeftOriginally = (phase === EvolutionPhase.TADPOLE);
 
     if (looksLeftOriginally) {
       this.visualSprite.setFlipX(dir === 1);
@@ -167,8 +169,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
         this.visualSprite.setDisplaySize(62, 58);
         break;
       case 'player_frog':
-      case 'sprite_pez_naranja':
-        this.visualSprite.setDisplaySize(64, 64);
+      case 'sprite_rana':
+        this.visualSprite.setDisplaySize(68, 58);
         break;
       case 'player_dragonfly':
       case 'sprite_libelula':
@@ -184,12 +186,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     this.baseScaleX = Math.abs(this.visualSprite.scaleX);
     this.baseScaleY = Math.abs(this.visualSprite.scaleY);
     this.setFacingDirection(this._facingDirection);
+
+    // Sincronizar hitbox con las dimensiones del nuevo frame
+    if (this.currentConfig) {
+      this.applyPhysicsConfig(this.currentConfig);
+    }
   }
 
   public get visualCenter(): { x: number; y: number } {
     return {
       x: this.x,
-      y: this.y - this.visualSprite.displayHeight / 2
+      y: (this.y + 4) - this.visualSprite.displayHeight / 2
     };
   }
 
@@ -282,8 +289,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
       }
     }
 
-    // Sincronizar el sprite visual con la posición del cuerpo físico
-    this.visualSprite.setPosition(this.x, this.y);
+    // Sincronizar el sprite visual con la posición del cuerpo físico (+4px de hundimiento en musgo)
+    this.visualSprite.setPosition(this.x, this.y + 4);
 
     this.stateMachine.update(time, delta);
   }

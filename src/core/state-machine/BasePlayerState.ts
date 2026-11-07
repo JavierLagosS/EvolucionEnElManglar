@@ -27,11 +27,11 @@ export abstract class BasePlayerState implements IPlayerState {
   }
 
   public enter(player: IPlayer): void {
-    // 1. Aplicar la física definida para esta fase
-    player.applyPhysicsConfig(this.physicsConfig);
-
-    // 2. Aplicar texturas visuales
+    // 1. Aplicar texturas visuales primero para adaptar las dimensiones del frame base
     player.setVisualTexture(`player_${this.phase.toLowerCase()}`);
+
+    // 2. Aplicar la física definida para esta fase con el offset recalibrado
+    player.applyPhysicsConfig(this.physicsConfig);
 
     // 3. Efecto de Game Feel al transformar (Squash & Stretch)
     player.triggerSquashAndStretch(1.3, 0.7, 180);

@@ -20,7 +20,9 @@ export class BootScene extends Phaser.Scene {
       'libelula',
       'tiburon',
       'calamar',
-      'avispa'
+      'avispa',
+      'rana',
+      'mosca'
     ];
     spriteNames.forEach((name) => {
       const img = new Image();
@@ -30,17 +32,17 @@ export class BootScene extends Phaser.Scene {
     // 2. Carga en el Texture Manager de Phaser con los nombres oficiales y aliases
     this.load.image('player_mushroom', '/assets/sprites/hongo.png');
     this.load.image('player_tadpole', '/assets/sprites/pez_celeste.png');
-    this.load.image('player_frog', '/assets/sprites/pez_naranja.png');
+    this.load.image('player_frog', '/assets/sprites/rana.png');
     this.load.image('player_dragonfly', '/assets/sprites/libelula.png');
     this.load.image('player_shark', '/assets/sprites/tiburon.png');
 
     // Presas
-    this.load.image('food_fly', '/assets/sprites/avispa.png');
+    this.load.image('food_fly', '/assets/sprites/mosca.png');
     this.load.image('food_fish', '/assets/sprites/pez_rosa.png');
     this.load.image('food_fish_pink', '/assets/sprites/pez_rosa.png');
     this.load.image('food_fish_orange', '/assets/sprites/pez_naranja.png');
     this.load.image('food_fish_cyan', '/assets/sprites/pez_celeste.png');
-    this.load.image('food_big_fly', '/assets/sprites/avispa.png');
+    this.load.image('food_big_fly', '/assets/sprites/mosca.png');
     this.load.image('food_wasp', '/assets/sprites/avispa.png');
 
     // Jefe Calamar Gigante
@@ -55,6 +57,8 @@ export class BootScene extends Phaser.Scene {
     this.load.image('sprite_tiburon', '/assets/sprites/tiburon.png');
     this.load.image('sprite_calamar', '/assets/sprites/calamar.png');
     this.load.image('sprite_avispa', '/assets/sprites/avispa.png');
+    this.load.image('sprite_rana', '/assets/sprites/rana.png');
+    this.load.image('sprite_mosca', '/assets/sprites/mosca.png');
   }
 
   public create(): void {
