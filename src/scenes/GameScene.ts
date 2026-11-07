@@ -47,6 +47,7 @@ export class GameScene extends Phaser.Scene {
   // Estado del juego y cinemáticas
   public gameState: 'INTRO_CINEMATIC' | 'PLAYING' = 'INTRO_CINEMATIC';
   public liamIntroCinematic: LiamIntroCinematic | null = null;
+  public touchControlsContainer: Phaser.GameObjects.Container | null = null;
   public isInputFrozen: boolean = false;
   public coronationCinematic: CoronationCinematic | null = null;
 
@@ -166,6 +167,7 @@ export class GameScene extends Phaser.Scene {
 
     // 11. Capa de Presentación / HUD y Minimapa Vertical
     this.createHUD();
+    this.createTouchControls();
     this.createMinimap();
     this.bindDomainEvents();
 
@@ -1208,6 +1210,7 @@ export class GameScene extends Phaser.Scene {
 
     this.gameState = 'INTRO_CINEMATIC';
     this.isInputFrozen = true;
+    this.touchControlsContainer?.setVisible(false);
 
     const gameContainer = this.game.canvas.parentElement || document.body;
 
@@ -1216,11 +1219,119 @@ export class GameScene extends Phaser.Scene {
       onStartGame: () => {
         this.isInputFrozen = false;
         this.gameState = 'PLAYING';
+        this.touchControlsContainer?.setVisible(true);
         this.liamIntroCinematic = null;
         this.soundSystem.resume();
         this.soundSystem.playGameStart();
       }
     });
+  }
+
+  /**
+   * Detecta si el dispositivo es táctil y crea controles virtuales en pantalla
+   * (Izquierda, Derecha, Salto/Nado y Habilidad) adaptados para móvil / tablet.
+   */
+  private createTouchControls(): void {
+    const isTouchDevice = ('ontouchstart' in window) ||
+                          (navigator.maxTouchPoints > 0) ||
+                          window.location.search.includes('touch');
+
+    if (!isTouchDevice) return;
+
+    // Permitir multitouch en Phaser (hasta 4 dedos a la vez)
+    this.input.addPointer(3);
+
+    this.touchControlsContainer = this.add.container(0, 0).setScrollFactor(0).setDepth(20000);
+
+    const createTouchBtn = (
+      x: number,
+      y: number,
+      radius: number,
+      label: string,
+      sublabel: string,
+      accentColor: number,
+      onPress: () => void,
+      onRelease: () => void
+    ) => {
+      const btnGfx = this.add.graphics();
+      const drawBtn = (isPressed: boolean) => {
+        btnGfx.clear();
+        btnGfx.fillStyle(isPressed ? accentColor : 0x05140d, isPressed ? 0.75 : 0.45);
+        btnGfx.fillCircle(x, y, radius);
+        btnGfx.lineStyle(3, isPressed ? 0xffffff : accentColor, isPressed ? 0.95 : 0.7);
+        btnGfx.strokeCircle(x, y, radius);
+      };
+      drawBtn(false);
+
+      const iconText = this.add.text(x, y - (sublabel ? 6 : 0), label, {
+        fontFamily: 'sans-serif',
+        fontSize: '28px',
+        color: '#ffffff',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      let subText: Phaser.GameObjects.Text | null = null;
+      if (sublabel) {
+        subText = this.add.text(x, y + 16, sublabel, {
+          fontFamily: 'sans-serif',
+          fontSize: '10px',
+          color: '#d8f3dc',
+          fontStyle: 'bold'
+        }).setOrigin(0.5);
+      }
+
+      const hitArea = this.add.circle(x, y, radius + 8, 0x000000, 0.001);
+      hitArea.setInteractive({ useHandCursor: true });
+
+      let isDown = false;
+      hitArea.on('pointerdown', () => {
+        isDown = true;
+        drawBtn(true);
+        onPress();
+      });
+
+      const release = () => {
+        if (isDown) {
+          isDown = false;
+          drawBtn(false);
+          onRelease();
+        }
+      };
+
+      hitArea.on('pointerup', release);
+      hitArea.on('pointerout', release);
+      hitArea.on('pointercancel', release);
+
+      const items: Phaser.GameObjects.GameObject[] = [btnGfx, iconText, hitArea];
+      if (subText) items.push(subText);
+      this.touchControlsContainer?.add(items);
+    };
+
+    // Botones Izquierda y Derecha (Esquina Inferior Izquierda)
+    createTouchBtn(70, 640, 36, '◄', 'IZQ', 0x52b788,
+      () => { this.rawKeys.left = true; this.rawKeys.leftJustDown = true; },
+      () => { this.rawKeys.left = false; }
+    );
+
+    createTouchBtn(155, 640, 36, '►', 'DER', 0x52b788,
+      () => { this.rawKeys.right = true; this.rawKeys.rightJustDown = true; },
+      () => { this.rawKeys.right = false; }
+    );
+
+    // Botones Salto/Nado y Habilidad (Esquina Inferior Derecha)
+    createTouchBtn(1115, 640, 38, '▲', 'SALTO', 0x48cae4,
+      () => { this.rawKeys.jump = true; this.rawKeys.jumpJustDown = true; this.rawKeys.up = true; },
+      () => { this.rawKeys.jump = false; this.rawKeys.up = false; }
+    );
+
+    createTouchBtn(1205, 640, 38, '⚡', 'HABILIDAD', 0xffd166,
+      () => { this.triggerPlayerAbility(); },
+      () => {}
+    );
+
+    if (this.gameState === 'INTRO_CINEMATIC') {
+      this.touchControlsContainer.setVisible(false);
+    }
   }
 
   private createHUD(): void {

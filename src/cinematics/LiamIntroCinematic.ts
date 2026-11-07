@@ -71,6 +71,7 @@ export class LiamIntroCinematic {
   private onKeyDownBound: (e: KeyboardEvent) => void;
   private onMouseMoveBound: (e: MouseEvent) => void;
   private onClickBound: (e: MouseEvent) => void;
+  private onTouchStartBound: (e: TouchEvent) => void;
 
   constructor(options: LiamIntroOptions) {
     this.container = options.container;
@@ -107,10 +108,21 @@ export class LiamIntroCinematic {
     this.onKeyDownBound = this.handleKeyDown.bind(this);
     this.onMouseMoveBound = this.handleMouseMove.bind(this);
     this.onClickBound = this.handleClick.bind(this);
+    this.onTouchStartBound = (e: TouchEvent) => {
+      if (e.touches && e.touches.length > 0) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('click', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        this.handleClick(mouseEvent);
+      }
+    };
 
     window.addEventListener('keydown', this.onKeyDownBound);
     this.canvas.addEventListener('mousemove', this.onMouseMoveBound);
     this.canvas.addEventListener('click', this.onClickBound);
+    this.canvas.addEventListener('touchstart', this.onTouchStartBound, { passive: true });
 
     this.loadImages();
     this.initParticles();
@@ -938,6 +950,7 @@ export class LiamIntroCinematic {
     window.removeEventListener('keydown', this.onKeyDownBound);
     this.canvas.removeEventListener('mousemove', this.onMouseMoveBound);
     this.canvas.removeEventListener('click', this.onClickBound);
+    this.canvas.removeEventListener('touchstart', this.onTouchStartBound);
 
     if (this.canvas && this.canvas.parentElement) {
       this.canvas.parentElement.removeChild(this.canvas);
