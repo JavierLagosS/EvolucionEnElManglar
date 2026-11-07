@@ -348,4 +348,43 @@ export class SoundSystem {
       // Audio seguro
     }
   }
+
+  /**
+   * Fanfarria corta y alegre de inicio de partida al comenzar a jugar.
+   */
+  public playGameStart(): void {
+    if (this.isMuted) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const notes = [
+        { f: 523.25, t: 0.0, d: 0.25 },  // C5
+        { f: 659.25, t: 0.08, d: 0.25 }, // E5
+        { f: 783.99, t: 0.16, d: 0.28 }, // G5
+        { f: 1046.50, t: 0.24, d: 0.55 } // C6
+      ];
+
+      notes.forEach((note) => {
+        const start = now + note.t;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(note.f, start);
+
+        gain.gain.setValueAtTime(0.16, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + note.d);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(start);
+        osc.stop(start + note.d);
+      });
+    } catch {
+      // Audio seguro
+    }
+  }
 }
