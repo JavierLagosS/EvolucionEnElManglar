@@ -38,8 +38,8 @@ export class FishFood extends BaseFood {
     super(scene, x, y, chosen, 18);
     this.visualSprite.setDisplaySize(36, 34);
 
-    // pez_rosa y pez_naranja miran a la derecha originalmente
-    this.looksLeftOriginally = (chosen === 'food_fish_cyan');
+    // pez_rosa mira a la derecha; pez_naranja mira a la izquierda originalmente
+    this.looksLeftOriginally = (chosen === 'food_fish_orange');
 
     this.floatSpeed = 0.003;
     this.floatAmplitudeY = 6;
@@ -76,7 +76,7 @@ export class WaspFood extends BaseFood {
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'food_wasp', 22);
     this.visualSprite.setDisplaySize(44, 38);
-    this.looksLeftOriginally = false; // avispa.png mira a la derecha
+    this.looksLeftOriginally = true; // avispa.png mira a la izquierda (nativeFacing = 'left')
     this.floatSpeed = 0.0045;
     this.floatAmplitudeY = 10;
     this.floatAmplitudeX = 18;

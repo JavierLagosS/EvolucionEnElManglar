@@ -24,6 +24,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   private readonly stateMachine: PlayerStateMachine;
   private _isInWater: boolean = false;
   private _facingDirection: 1 | -1 = 1;
+  public facingRight: boolean = true;
   private squashTween: Phaser.Tweens.Tween | null = null;
   private baseScaleX: number = 1;
   private baseScaleY: number = 1;
@@ -117,16 +118,39 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
 
   public setFacingDirection(dir: 1 | -1): void {
     this._facingDirection = dir;
-    // rana.png, tiburon.png, libelula.png, avispa.png miran hacia la DERECHA originalmente
-    // pez_celeste.png mira hacia la IZQUIERDA originalmente
-    // hongo.png mira de frente (simétrico)
-    const phase = this.currentPhase;
-    const looksLeftOriginally = (phase === EvolutionPhase.TADPOLE);
+    this.facingRight = (dir === 1);
+    this.updateFacing();
+  }
 
-    if (looksLeftOriginally) {
-      this.visualSprite.setFlipX(dir === 1);
+  public updateFacing(): void {
+    const phase = this.currentPhase;
+
+    // Tabla explícita de orientación nativa (nativeFacing):
+    // Sprites que en su archivo PNG miran hacia la IZQUIERDA (nativeFacing = 'left'):
+    // - TADPOLE (pez_celeste.png)
+    // - DRAGONFLY (libelula.png)
+    // Regla: DERECHA (facingRight = true) -> flipX = true | IZQUIERDA (facingRight = false) -> flipX = false
+    //
+    // Sprites que en su archivo PNG miran hacia la DERECHA (nativeFacing = 'right'):
+    // - FROG (rana.png)
+    // - SHARK (tiburon.png)
+    // Regla: DERECHA (facingRight = true) -> flipX = false | IZQUIERDA (facingRight = false) -> flipX = true
+    //
+    // Vista frontal / simétrica: MUSHROOM (hongo.png) -> flipX = false
+    if (phase === EvolutionPhase.MUSHROOM) {
+      this.visualSprite.setFlipX(false);
+      return;
+    }
+
+    const nativeFacingLeft = (
+      phase === EvolutionPhase.TADPOLE ||
+      phase === EvolutionPhase.DRAGONFLY
+    );
+
+    if (nativeFacingLeft) {
+      this.visualSprite.setFlipX(this.facingRight);
     } else {
-      this.visualSprite.setFlipX(dir === -1);
+      this.visualSprite.setFlipX(!this.facingRight);
     }
   }
 
@@ -185,7 +209,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     }
     this.baseScaleX = Math.abs(this.visualSprite.scaleX);
     this.baseScaleY = Math.abs(this.visualSprite.scaleY);
-    this.setFacingDirection(this._facingDirection);
+    this.updateFacing();
 
     // Sincronizar hitbox con las dimensiones del nuevo frame
     if (this.currentConfig) {
@@ -287,6 +311,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
         this.clearVisualTint();
         this.visualSprite.setAlpha(1);
       }
+    }
+
+    // Guardar siempre la última dirección válida según la velocidad horizontal
+    if (this.body.velocity.x > 0.1) {
+      this.facingRight = true;
+      this._facingDirection = 1;
+      this.updateFacing();
+    } else if (this.body.velocity.x < -0.1) {
+      this.facingRight = false;
+      this._facingDirection = -1;
+      this.updateFacing();
     }
 
     // Sincronizar el sprite visual con la posición del cuerpo físico (+4px de hundimiento en musgo)
