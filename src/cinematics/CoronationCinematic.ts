@@ -63,11 +63,22 @@ export class CoronationCinematic {
   private readonly btnStats = { x: 660, y: 642, w: 280, h: 48 };
   private readonly btnCloseStats = { x: 540, y: 520, w: 200, h: 40 };
 
+  // Sprites estilo Kirby para coronación
+  private dragonflyImg: HTMLImageElement;
+  private sharkImg: HTMLImageElement;
+
   constructor(options: CoronationOptions) {
     this.container = options.container;
     this.totalPlayTimeMs = options.totalPlayTimeMs;
     this.totalPreyEaten = options.totalPreyEaten;
     this.onRestartCallback = options.onRestart;
+
+    // Precargar imágenes de los reyes del manglar
+    this.dragonflyImg = new Image();
+    this.dragonflyImg.src = '/assets/sprites/libelula.png';
+
+    this.sharkImg = new Image();
+    this.sharkImg.src = '/assets/sprites/tiburon.png';
 
     // Crear overlay de Canvas
     this.canvas = document.createElement('canvas');
@@ -437,105 +448,122 @@ export class CoronationCinematic {
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
     ctx.letterSpacing = '3px';
-    ctx.fillText('✨ REINA SUPREMA DEL DOSEL AÉREO ✨', hoverX, hoverY - 78);
+    ctx.fillText('✨ REINA SUPREMA DEL DOSEL AÉREO ✨', hoverX, hoverY - 105);
 
     // Corona de esporas y partículas brillantes sobre la cabeza de la Libélula
-    this.renderSporeCrown(ctx, hoverX, hoverY - 52, 0xffd166, now);
+    this.renderSporeCrown(ctx, hoverX, hoverY - 76, 0xffd166, now);
 
-    // Dibujo de la Libélula (Kirby Style / Ilustración detallada)
+    // Dibujo de la Libélula: Sprite oficial Kirby o fallback vectorial
     ctx.translate(hoverX, hoverY);
 
-    // 1. Alas transparentes superiores e inferiores
-    const drawWing = (angle: number, flip: number) => {
-      ctx.save();
-      ctx.scale(flip, 1);
-      ctx.rotate(angle);
-
-      // Ala anterior
-      ctx.fillStyle = 'rgba(144, 224, 239, 0.55)';
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.lineWidth = 1.8;
+    if (this.dragonflyImg && this.dragonflyImg.complete && this.dragonflyImg.naturalWidth > 0) {
+      // Aura celestial resplandeciente
+      const glowGrad = ctx.createRadialGradient(0, 0, 20, 0, 0, 140);
+      glowGrad.addColorStop(0, 'rgba(255, 230, 109, 0.45)');
+      glowGrad.addColorStop(0.6, 'rgba(116, 198, 157, 0.22)');
+      glowGrad.addColorStop(1, 'rgba(255, 230, 109, 0)');
+      ctx.fillStyle = glowGrad;
       ctx.beginPath();
-      ctx.ellipse(55, -15, 52, 14, 0.15, 0, Math.PI * 2);
+      ctx.arc(0, 0, 140, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Renderizado del sprite Kirby en tamaño grande
+      const w = 220;
+      const h = 185;
+      ctx.drawImage(this.dragonflyImg, -w / 2, -h / 2, w, h);
+    } else {
+      // 1. Alas transparentes superiores e inferiores
+      const drawWing = (angle: number, flip: number) => {
+        ctx.save();
+        ctx.scale(flip, 1);
+        ctx.rotate(angle);
+
+        // Ala anterior
+        ctx.fillStyle = 'rgba(144, 224, 239, 0.55)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.ellipse(55, -15, 52, 14, 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Venas de las alas
+        ctx.strokeStyle = 'rgba(202, 240, 248, 0.7)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(10, -15);
+        ctx.lineTo(100, -15);
+        ctx.moveTo(40, -15);
+        ctx.lineTo(60, -25);
+        ctx.moveTo(65, -15);
+        ctx.lineTo(80, -26);
+        ctx.stroke();
+
+        // Ala posterior
+        ctx.fillStyle = 'rgba(116, 198, 157, 0.48)';
+        ctx.beginPath();
+        ctx.ellipse(48, 8, 44, 12, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.restore();
+      };
+
+      // Par de alas derecha e izquierda con aleteo
+      drawWing(wingAngle, 1);
+      drawWing(-wingAngle, -1);
+
+      // 2. Abdomen segmentado alargado (verde esmeralda brillante a cian)
+      const abdGrad = ctx.createLinearGradient(0, -5, 0, 65);
+      abdGrad.addColorStop(0, '#2d6a4f');
+      abdGrad.addColorStop(0.5, '#52b788');
+      abdGrad.addColorStop(1, '#74c69d');
+      ctx.fillStyle = abdGrad;
+      ctx.strokeStyle = '#081c15';
+      ctx.lineWidth = 2.5;
+
+      // Segmentos del abdomen
+      for (let seg = 0; seg < 6; seg++) {
+        const sy = 12 + seg * 9;
+        const sw = 10 - seg * 0.9;
+        ctx.beginPath();
+        ctx.ellipse(0, sy, sw, 5.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // 3. Tórax robusto
+      ctx.fillStyle = '#1b4332';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 15, 16, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      // Venas de las alas
-      ctx.strokeStyle = 'rgba(202, 240, 248, 0.7)';
-      ctx.lineWidth = 1;
+      // 4. Cabeza y ojos compuestos vibrantes
+      ctx.fillStyle = '#081c15';
       ctx.beginPath();
-      ctx.moveTo(10, -15);
-      ctx.lineTo(100, -15);
-      ctx.moveTo(40, -15);
-      ctx.lineTo(60, -25);
-      ctx.moveTo(65, -15);
-      ctx.lineTo(80, -26);
-      ctx.stroke();
+      ctx.ellipse(0, -16, 16, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-      // Ala posterior
-      ctx.fillStyle = 'rgba(116, 198, 157, 0.48)';
+      // Grandes ojos compuestos violeta/dorado
+      const eyeGrad = ctx.createRadialGradient(-9, -16, 2, -9, -16, 8);
+      eyeGrad.addColorStop(0, '#ffd166');
+      eyeGrad.addColorStop(0.7, '#7209b7');
+      eyeGrad.addColorStop(1, '#3a0ca3');
+      ctx.fillStyle = eyeGrad;
       ctx.beginPath();
-      ctx.ellipse(48, 8, 44, 12, -0.1, 0, Math.PI * 2);
+      ctx.arc(-9, -16, 7, 0, Math.PI * 2);
+      ctx.arc(9, -16, 7, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.restore();
-    };
-
-    // Par de alas derecha e izquierda con aleteo
-    drawWing(wingAngle, 1);
-    drawWing(-wingAngle, -1);
-
-    // 2. Abdomen segmentado alargado (verde esmeralda brillante a cian)
-    const abdGrad = ctx.createLinearGradient(0, -5, 0, 65);
-    abdGrad.addColorStop(0, '#2d6a4f');
-    abdGrad.addColorStop(0.5, '#52b788');
-    abdGrad.addColorStop(1, '#74c69d');
-    ctx.fillStyle = abdGrad;
-    ctx.strokeStyle = '#081c15';
-    ctx.lineWidth = 2.5;
-
-    // Segmentos del abdomen
-    for (let seg = 0; seg < 6; seg++) {
-      const sy = 12 + seg * 9;
-      const sw = 10 - seg * 0.9;
+      // Brillos blancos en los ojos
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.ellipse(0, sy, sw, 5.5, 0, 0, Math.PI * 2);
+      ctx.arc(-11, -18, 2.5, 0, Math.PI * 2);
+      ctx.arc(7, -18, 2.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
     }
-
-    // 3. Tórax robusto
-    ctx.fillStyle = '#1b4332';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 15, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // 4. Cabeza y ojos compuestos vibrantes
-    ctx.fillStyle = '#081c15';
-    ctx.beginPath();
-    ctx.ellipse(0, -16, 16, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Grandes ojos compuestos violeta/dorado
-    const eyeGrad = ctx.createRadialGradient(-9, -16, 2, -9, -16, 8);
-    eyeGrad.addColorStop(0, '#ffd166');
-    eyeGrad.addColorStop(0.7, '#7209b7');
-    eyeGrad.addColorStop(1, '#3a0ca3');
-    ctx.fillStyle = eyeGrad;
-    ctx.beginPath();
-    ctx.arc(-9, -16, 7, 0, Math.PI * 2);
-    ctx.arc(9, -16, 7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Brillos blancos en los ojos
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(-11, -18, 2.5, 0, Math.PI * 2);
-    ctx.arc(7, -18, 2.5, 0, Math.PI * 2);
-    ctx.fill();
 
     ctx.restore();
   }
@@ -556,121 +584,133 @@ export class CoronationCinematic {
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
     ctx.letterSpacing = '3px';
-    ctx.fillText('🌊 SOBERANO DEL ABISMO MARINO 🌊', swimX, swimY - 80);
+    ctx.fillText('🌊 SOBERANO DEL ABISMO MARINO 🌊', swimX, swimY - 115);
 
     // Corona de esporas y partículas brillantes sobre el Tiburón
-    this.renderSporeCrown(ctx, swimX, swimY - 54, 0x48cae4, now);
+    this.renderSporeCrown(ctx, swimX, swimY - 84, 0x48cae4, now);
 
     ctx.translate(swimX, swimY);
 
-    // 1. Cola caudal con balanceo orgánico de natación
-    ctx.save();
-    ctx.translate(-75, 0);
-    ctx.rotate(tailAngle);
-
-    // Aleta de la cola caudal (lóbulo superior largo y lóbulo inferior)
-    ctx.fillStyle = '#495057';
-    ctx.strokeStyle = '#1b263b';
-    ctx.lineWidth = 2.8;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.quadraticCurveTo(-35, -42, -55, -50); // Lóbulo superior majestuoso
-    ctx.quadraticCurveTo(-45, -15, -28, -5);
-    ctx.quadraticCurveTo(-45, 18, -48, 32);  // Lóbulo inferior
-    ctx.quadraticCurveTo(-30, 20, 0, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-
-    // 2. Aleta dorsal icónica y definida
-    ctx.fillStyle = '#343a40';
-    ctx.strokeStyle = '#1b263b';
-    ctx.lineWidth = 2.8;
-    ctx.beginPath();
-    ctx.moveTo(-15, -18);
-    ctx.quadraticCurveTo(5, -65, 12, -68);
-    ctx.quadraticCurveTo(8, -35, 25, -18);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // 3. Aleta pectoral ventral
-    ctx.fillStyle = '#495057';
-    ctx.beginPath();
-    ctx.moveTo(10, 18);
-    ctx.lineTo(-12, 48);
-    ctx.lineTo(2, 46);
-    ctx.lineTo(38, 16);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // 4. Cuerpo principal hidrodinámico (Contrasombreado: Gris/Plateado dorsal, vientre claro)
-    const bodyGrad = ctx.createLinearGradient(0, -25, 0, 25);
-    bodyGrad.addColorStop(0, '#343a40');    // Gris pizarra dorsal
-    bodyGrad.addColorStop(0.45, '#6c757d'); // Gris plata medio
-    bodyGrad.addColorStop(0.7, '#dee2e6');  // Vientre blanco/crema claro
-    bodyGrad.addColorStop(1, '#f8f9fa');
-    ctx.fillStyle = bodyGrad;
-    ctx.beginPath();
-    ctx.moveTo(-80, 0);
-    // Lomo dorsal
-    ctx.quadraticCurveTo(-20, -32, 50, -26);
-    // Hocico cónico estilizado
-    ctx.quadraticCurveTo(85, -14, 98, 0);
-    // Mandíbula inferior definida
-    ctx.quadraticCurveTo(80, 18, 48, 25);
-    // Vientre ventral
-    ctx.quadraticCurveTo(-15, 28, -80, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // 5. Hendiduras branquiales (5 arcos paralelos)
-    ctx.strokeStyle = '#212529';
-    ctx.lineWidth = 2;
-    for (let g = 0; g < 5; g++) {
-      const gx = 18 - g * 6;
+    if (this.sharkImg && this.sharkImg.complete && this.sharkImg.naturalWidth > 0) {
+      // Aura abisal bioluminiscente cian profundo
+      const glowGrad = ctx.createRadialGradient(0, 0, 30, 0, 0, 160);
+      glowGrad.addColorStop(0, 'rgba(72, 202, 228, 0.45)');
+      glowGrad.addColorStop(0.6, 'rgba(0, 119, 182, 0.22)');
+      glowGrad.addColorStop(1, 'rgba(72, 202, 228, 0)');
+      ctx.fillStyle = glowGrad;
       ctx.beginPath();
-      ctx.arc(gx, 0, 10, -0.6, 0.6);
+      ctx.arc(0, 0, 160, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Renderizado del sprite Kirby en tamaño grande
+      const w = 260;
+      const h = 208;
+      ctx.drawImage(this.sharkImg, -w / 2, -h / 2, w, h);
+    } else {
+      // 1. Cola caudal con balanceo orgánico de natación
+      ctx.save();
+      ctx.translate(-75, 0);
+      ctx.rotate(tailAngle);
+
+      // Aleta de la cola caudal (lóbulo superior largo y lóbulo inferior)
+      ctx.fillStyle = '#495057';
+      ctx.strokeStyle = '#1b263b';
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-35, -42, -55, -50);
+      ctx.quadraticCurveTo(-45, -15, -28, -5);
+      ctx.quadraticCurveTo(-45, 18, -48, 32);
+      ctx.quadraticCurveTo(-30, 20, 0, 0);
+      ctx.closePath();
+      ctx.fill();
       ctx.stroke();
-    }
+      ctx.restore();
 
-    // 6. Boca con contorno y ligeros dientes aserrados
-    ctx.strokeStyle = '#212529';
-    ctx.fillStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(56, 12);
-    ctx.quadraticCurveTo(72, 14, 86, 6);
-    ctx.stroke();
-
-    // Dientes aserrados miniatura
-    for (let t = 0; t < 3; t++) {
-      const tx = 62 + t * 8;
+      // 2. Aleta dorsal icónica y definida
+      ctx.fillStyle = '#343a40';
+      ctx.strokeStyle = '#1b263b';
+      ctx.lineWidth = 2.8;
       ctx.beginPath();
-      ctx.moveTo(tx, 11);
-      ctx.lineTo(tx + 3, 16);
-      ctx.lineTo(tx + 6, 10);
+      ctx.moveTo(-15, -18);
+      ctx.quadraticCurveTo(5, -65, 12, -68);
+      ctx.quadraticCurveTo(8, -35, 25, -18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 3. Aleta pectoral ventral
+      ctx.fillStyle = '#495057';
+      ctx.beginPath();
+      ctx.moveTo(10, 18);
+      ctx.lineTo(-12, 48);
+      ctx.lineTo(2, 46);
+      ctx.lineTo(38, 16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 4. Cuerpo principal hidrodinámico
+      const bodyGrad = ctx.createLinearGradient(0, -25, 0, 25);
+      bodyGrad.addColorStop(0, '#343a40');
+      bodyGrad.addColorStop(0.45, '#6c757d');
+      bodyGrad.addColorStop(0.7, '#dee2e6');
+      bodyGrad.addColorStop(1, '#f8f9fa');
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(-80, 0);
+      ctx.quadraticCurveTo(-20, -32, 50, -26);
+      ctx.quadraticCurveTo(85, -14, 98, 0);
+      ctx.quadraticCurveTo(80, 18, 48, 25);
+      ctx.quadraticCurveTo(-15, 28, -80, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 5. Hendiduras branquiales
+      ctx.strokeStyle = '#212529';
+      ctx.lineWidth = 2;
+      for (let g = 0; g < 5; g++) {
+        const gx = 18 - g * 6;
+        ctx.beginPath();
+        ctx.arc(gx, 0, 10, -0.6, 0.6);
+        ctx.stroke();
+      }
+
+      // 6. Boca con contorno y ligeros dientes aserrados
+      ctx.strokeStyle = '#212529';
+      ctx.fillStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(56, 12);
+      ctx.quadraticCurveTo(72, 14, 86, 6);
+      ctx.stroke();
+
+      for (let t = 0; t < 3; t++) {
+        const tx = 62 + t * 8;
+        ctx.beginPath();
+        ctx.moveTo(tx, 11);
+        ctx.lineTo(tx + 3, 16);
+        ctx.lineTo(tx + 6, 10);
+        ctx.fill();
+      }
+
+      // 7. Ojo feroz e inteligente con brillo
+      ctx.fillStyle = '#212529';
+      ctx.beginPath();
+      ctx.arc(68, -8, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#48cae4';
+      ctx.beginPath();
+      ctx.arc(68, -8, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(67, -9, 1.5, 0, Math.PI * 2);
       ctx.fill();
     }
-
-    // 7. Ojo feroz e inteligente con brillo
-    ctx.fillStyle = '#212529';
-    ctx.beginPath();
-    ctx.arc(68, -8, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#48cae4';
-    ctx.beginPath();
-    ctx.arc(68, -8, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(67, -9, 1.5, 0, Math.PI * 2);
-    ctx.fill();
 
     ctx.restore();
   }

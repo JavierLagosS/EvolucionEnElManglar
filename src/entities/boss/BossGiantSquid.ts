@@ -31,6 +31,7 @@ export class BossGiantSquid extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, x: number = 640, y: number = 2050) {
     super(scene, x, y);
     this.visualSprite = scene.add.sprite(0, 0, 'boss_squid');
+    this.visualSprite.setDisplaySize(120, 134);
     this.add(this.visualSprite);
 
     scene.add.existing(this);
@@ -63,19 +64,15 @@ export class BossGiantSquid extends Phaser.GameObjects.Container {
     }
     this.visualSprite.setScale(1);
 
-    // Estado enfurecido a 3 HP o menos (aumenta velocidad y emite resplandor carmesí)
-    if (this.hp <= 3 && this.hp > 0) {
-      this.patrolSpeed = 240;
-      this.visualSprite.setTint(0xff0054);
+    // Estado enfurecido a 2 HP o menos (Modo Furia: aumenta velocidad a 260)
+    if (this.hp <= 2 && this.hp > 0) {
+      this.patrolSpeed = 260;
     }
 
     // Flash blanco de impacto
     this.visualSprite.setTintFill(0xffffff);
     this.scene.time.delayedCall(160, () => {
-      if (this.hp <= 3 && this.hp > 0) {
-        this.visualSprite.clearTint();
-        this.visualSprite.setTint(0xff0054);
-      } else {
+      if (this.hp > 0) {
         this.visualSprite.clearTint();
       }
     });
@@ -97,7 +94,21 @@ export class BossGiantSquid extends Phaser.GameObjects.Container {
       this.invulnerableTimer--;
     }
 
+    // Modo Furia (<= 2 HP): pulso rojizo visual continuo
+    if (this.hp <= 2 && this.hp > 0) {
+      if (this.invulnerableTimer <= 0) {
+        const pulse = 0.5 + 0.5 * Math.sin(this.scene.time.now * 0.012);
+        const r = 255;
+        const g = Math.floor(20 + 40 * pulse);
+        const b = Math.floor(30 + 50 * pulse);
+        this.visualSprite.setTint((r << 16) | (g << 8) | b);
+      }
+    } else if (this.invulnerableTimer <= 0) {
+      this.visualSprite.clearTint();
+    }
+
     if (this.hp <= 0) {
+      this.visualSprite.clearTint();
       this.body.setVelocity(0, 0);
       return;
     }
