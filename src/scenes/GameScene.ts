@@ -8,6 +8,8 @@ import { BaseFood } from '../entities/food/BaseFood';
 import { PHASE_CONFIGURATIONS } from '../config/evolutionConfig';
 import { PredatorFish, HunterFrog } from '../entities/predators/PredatorEntities';
 import { BossKingfisher } from '../entities/boss/BossKingfisher';
+import { BossGiantSquid } from '../entities/boss/BossGiantSquid';
+import { CoronationCinematic } from '../cinematics/CoronationCinematic';
 import { SoundSystem } from '../core/audio/SoundSystem';
 import { ParticleSystem } from '../core/particles/ParticleSystem';
 
@@ -32,13 +34,22 @@ export class GameScene extends Phaser.Scene {
   public predatorGroup!: Phaser.GameObjects.Group;
   public waterZone!: Phaser.GameObjects.Zone;
 
-  // Jefe Final (Nivel 2)
+  // Jefes Finales (Nivel 2: Martín Pescador | Nivel 3: Calamar Gigante)
   public boss: BossKingfisher | null = null;
+  public bossSquid: BossGiantSquid | null = null;
   public bossFightActive: boolean = false;
   private bossHealthContainer: Phaser.GameObjects.Container | null = null;
   private bossHealthBarFill!: Phaser.GameObjects.Rectangle;
   private bossHealthText!: Phaser.GameObjects.Text;
   private bossAlertBanner: Phaser.GameObjects.Container | null = null;
+
+  // Congelamiento de entrada y cinemática de coronación
+  public isInputFrozen: boolean = false;
+  public coronationCinematic: CoronationCinematic | null = null;
+
+  // Estadísticas acumuladas de campaña
+  public totalPreyEaten: number = 0;
+  public sessionStartTime: number = Date.now();
 
   // Sistemas globales de Audio y Partículas
   public soundSystem: SoundSystem = SoundSystem.getInstance();
@@ -184,7 +195,7 @@ export class GameScene extends Phaser.Scene {
       const food = foodObj as unknown as BaseFood;
       if (!food || !food.isActive) return;
 
-      if (this.currentLevel === 2) {
+      if (this.currentLevel === 2 || this.currentLevel === 3) {
         const playerRank = this.getPlayerPhaseRank();
         const foodRank = this.getFoodRequiredPhase(food.type);
 
@@ -200,14 +211,15 @@ export class GameScene extends Phaser.Scene {
       const foodType = food.type;
       const consumed = this.evolutionManager.feed(food);
       if (consumed) {
+        this.totalPreyEaten++;
         this.soundSystem.playEat();
         this.particleSystem.emitEatParticles(foodX, foodY, foodType);
       }
     });
 
-    // Overlap jugador vs depredadores patrullando en Nivel 2
+    // Overlap jugador vs depredadores patrullando en Nivel 2 y 3
     this.physics.add.overlap(this.player, this.predatorGroup, (_p, predObj) => {
-      if (this.currentLevel === 2) {
+      if (this.currentLevel === 2 || this.currentLevel === 3) {
         this.handleTrophicDamage(predObj as Phaser.GameObjects.GameObject);
       }
     });
@@ -256,7 +268,7 @@ export class GameScene extends Phaser.Scene {
    * Dispara la habilidad activa según la fase evolutiva actual (Shift o Clic derecho).
    */
   public triggerPlayerAbility(): boolean {
-    if (this.abilityCooldownTimer > 0) return false;
+    if (this.isInputFrozen || this.abilityCooldownTimer > 0) return false;
     this.abilityCooldownTimer = this.ABILITY_COOLDOWN_MS;
 
     this.soundSystem.playAbility();
@@ -426,7 +438,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private showBossAlertBanner(): void {
+  private showBossAlertBanner(customTitle: string = '⚠️ ¡ALERTA: MARTÍN PESCADOR GIGANTE EN EL DOSEL! ⚠️'): void {
     if (this.bossAlertBanner) {
       this.bossAlertBanner.destroy();
     }
@@ -436,12 +448,12 @@ export class GameScene extends Phaser.Scene {
 
     const bg = this.add.graphics();
     bg.fillStyle(0x370617, 0.94);
-    bg.fillRoundedRect(-320, -28, 640, 56, 14);
+    bg.fillRoundedRect(-330, -28, 660, 56, 14);
     bg.lineStyle(2.5, 0xff0054, 1);
-    bg.strokeRoundedRect(-320, -28, 640, 56, 14);
+    bg.strokeRoundedRect(-330, -28, 660, 56, 14);
     banner.add(bg);
 
-    const text = this.add.text(0, 0, '⚠️ ¡ALERTA: MARTÍN PESCADOR GIGANTE EN EL DOSEL! ⚠️', {
+    const text = this.add.text(0, 0, customTitle, {
       fontFamily: 'sans-serif',
       fontSize: '17px',
       color: '#ffd166',
@@ -478,7 +490,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private createBossHealthBar(): void {
+  private createBossHealthBar(bossTitle: string = '👑 MARTÍN PESCADOR GIGANTE (JEFE)'): void {
     if (this.bossHealthContainer) {
       this.bossHealthContainer.destroy();
     }
@@ -488,12 +500,12 @@ export class GameScene extends Phaser.Scene {
 
     const bg = this.add.graphics();
     bg.fillStyle(0x1a0509, 0.9);
-    bg.fillRoundedRect(-170, -18, 340, 48, 10);
+    bg.fillRoundedRect(-180, -18, 360, 48, 10);
     bg.lineStyle(2, 0xd90429, 0.9);
-    bg.strokeRoundedRect(-170, -18, 340, 48, 10);
+    bg.strokeRoundedRect(-180, -18, 360, 48, 10);
     container.add(bg);
 
-    const title = this.add.text(0, -6, '👑 MARTÍN PESCADOR GIGANTE (JEFE)', {
+    const title = this.add.text(0, -6, bossTitle, {
       fontFamily: 'sans-serif',
       fontSize: '12px',
       color: '#ffd166',
@@ -529,16 +541,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateBossHealthBar(): void {
-    if (!this.boss || !this.bossHealthBarFill || !this.bossHealthText) return;
+    const activeBoss = this.bossSquid || this.boss;
+    if (!activeBoss || !this.bossHealthBarFill || !this.bossHealthText) return;
 
-    const ratio = Math.max(0, this.boss.hp / this.boss.maxHp);
+    const ratio = Math.max(0, activeBoss.hp / activeBoss.maxHp);
     this.tweens.add({
       targets: this.bossHealthBarFill,
       scaleX: ratio,
       duration: 180,
       ease: 'Quad.easeOut'
     });
-    this.bossHealthText.setText(`${this.boss.hp} / ${this.boss.maxHp} HP`);
+    this.bossHealthText.setText(`${activeBoss.hp} / ${activeBoss.maxHp} HP`);
   }
 
   public handleBossDefeated(): void {
@@ -576,8 +589,144 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         this.boss?.destroy();
         this.boss = null;
-        // Mostrar Modal de Victoria Definitiva
+        // Mostrar Modal de Victoria con acceso al Nivel 3
         this.showUltimateVictoryModal();
+      }
+    });
+  }
+
+  // ==========================================
+  // JEFE FINAL (NIVEL 3: CALAMAR GIGANTE DEL ABISMO)
+  // ==========================================
+
+  public startSquidBossFight(): void {
+    if (this.bossFightActive || this.bossSquid) return;
+    this.bossFightActive = true;
+
+    // 1. Sonido de alerta grave
+    this.soundSystem.playBossAlert();
+
+    // 2. Banner de alerta
+    this.showBossAlertBanner('⚠️ ¡ALERTA: CALAMAR GIGANTE EN EL ABISMO ACUÁTICO! ⚠️');
+
+    // 3. Instanciar al Jefe Calamar en el estrato acuático profundo (y = 2050)
+    this.bossSquid = new BossGiantSquid(this, 640, 2050);
+
+    // 4. Barra de vida del Jefe en el HUD superior
+    this.createBossHealthBar('🦑 CALAMAR GIGANTE DEL ABISMO (JEFE)');
+
+    // 5. Registrar colisión y combate entre Jugador y Calamar Gigante
+    this.physics.add.overlap(this.player, this.bossSquid, () => {
+      if (!this.bossFightActive || !this.bossSquid || this.bossSquid.hp <= 0) return;
+
+      if (this.player.isDashing) {
+        if (!this.bossSquid.isInvulnerable()) {
+          const remainingHp = this.bossSquid.takeDamage(1);
+          this.soundSystem.playBossHit();
+          this.particleSystem.emitBossHitParticles(this.bossSquid.x, this.bossSquid.y);
+          this.updateBossHealthBar();
+
+          if (remainingHp <= 0) {
+            this.handleSquidBossDefeated();
+          }
+        }
+      } else {
+        this.handleTrophicDamage(this.bossSquid as unknown as Phaser.GameObjects.GameObject);
+      }
+    });
+  }
+
+  public handleSquidBossDefeated(): void {
+    if (!this.bossSquid) return;
+    this.bossFightActive = false;
+    this.isInputFrozen = true;
+    this.player.setVelocity(0, 0);
+
+    // SFX triunfal de arpegio extendido trilogía
+    this.soundSystem.playTrilogyEnding();
+
+    // Emisión de partículas de derrota
+    this.particleSystem.emitBossDefeatParticles(this.bossSquid.x, this.bossSquid.y);
+
+    if (this.bossHealthContainer) {
+      this.tweens.add({
+        targets: this.bossHealthContainer,
+        alpha: 0,
+        scaleY: 0,
+        duration: 300,
+        onComplete: () => {
+          this.bossHealthContainer?.destroy();
+          this.bossHealthContainer = null;
+        }
+      });
+    }
+
+    this.tweens.add({
+      targets: this.bossSquid,
+      alpha: 0,
+      scaleX: 0.1,
+      scaleY: 0.1,
+      angle: 360,
+      duration: 650,
+      onComplete: () => {
+        this.bossSquid?.destroy();
+        this.bossSquid = null;
+        this.triggerCoronationVictory();
+      }
+    });
+  }
+
+  /**
+   * Muestra u oculta la interfaz de HUD completa para cinemáticas.
+   */
+  public setHUDVisible(visible: boolean): void {
+    if (this.minimapStaticGfx) this.minimapStaticGfx.setVisible(visible);
+    if (this.minimapDynamicGfx) this.minimapDynamicGfx.setVisible(visible);
+    if (this.phaseText) this.phaseText.setVisible(visible);
+    if (this.targetFoodText) this.targetFoodText.setVisible(visible);
+    if (this.progressBarFill) this.progressBarFill.setVisible(visible);
+    if (this.progressPercentText) this.progressPercentText.setVisible(visible);
+    if (this.levelText) this.levelText.setVisible(visible);
+    if (this.levelBadgeBg) this.levelBadgeBg.setVisible(visible);
+    if (this.abilityText) this.abilityText.setVisible(visible);
+    if (this.abilityBarFill) this.abilityBarFill.setVisible(visible);
+    if (this.abilityBadgeBg) this.abilityBadgeBg.setVisible(visible);
+  }
+
+  /**
+   * Detona la cinemática e ilustración interactiva de coronación final.
+   */
+  public triggerCoronationVictory(): void {
+    this.isInputFrozen = true;
+    this.player?.setVelocity(0, 0);
+    this.soundSystem.playTrilogyEnding();
+
+    // Ocultar HUD durante la ilustración de coronación
+    this.setHUDVisible(false);
+
+    if (this.bossHealthContainer) {
+      this.bossHealthContainer.destroy();
+      this.bossHealthContainer = null;
+    }
+    if (this.bossAlertBanner) {
+      this.bossAlertBanner.destroy();
+      this.bossAlertBanner = null;
+    }
+    if (this.victoryModal) {
+      this.victoryModal.destroy();
+      this.victoryModal = null;
+    }
+
+    const gameContainer = document.getElementById('game-container') || document.body;
+    const playTimeMs = Date.now() - this.sessionStartTime;
+
+    this.coronationCinematic = CoronationCinematic.start({
+      container: gameContainer,
+      totalPlayTimeMs: playTimeMs,
+      totalPreyEaten: this.totalPreyEaten,
+      onRestart: () => {
+        this.isInputFrozen = false;
+        this.startLevel(1);
       }
     });
   }
@@ -598,12 +747,12 @@ export class GameScene extends Phaser.Scene {
     // Marco épico de victoria
     const box = this.add.graphics();
     box.fillStyle(0x0a1c13, 0.96);
-    box.fillRoundedRect(-300, -190, 600, 380, 20);
+    box.fillRoundedRect(-310, -215, 620, 430, 20);
     box.lineStyle(4, 0xffd166, 1);
-    box.strokeRoundedRect(-300, -190, 600, 380, 20);
+    box.strokeRoundedRect(-310, -215, 620, 430, 20);
     modal.add(box);
 
-    const title = this.add.text(0, -130, '👑 ¡DEPREDADOR ALFA DERROTADO! 👑', {
+    const title = this.add.text(0, -155, '👑 ¡DEPREDADOR ALFA DERROTADO! 👑', {
       fontFamily: 'sans-serif',
       fontSize: '23px',
       color: '#ffd166',
@@ -611,41 +760,63 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     modal.add(title);
 
-    const subtitle = this.add.text(0, -60, '¡Has derrotado al temible Martín Pescador Gigante en el Dosel Aéreo!\n¡Eres el Amo Absoluto del Manglar y la cúspide evolutiva total!', {
+    const subtitle = this.add.text(0, -90, '¡Has derrotado al temible Martín Pescador Gigante en el Dosel Aéreo!\nEl cielo está despejado, pero las profundidades abisales reclaman tu presencia...', {
       fontFamily: 'sans-serif',
-      fontSize: '15px',
+      fontSize: '14.5px',
       color: '#d8f3dc',
       align: 'center',
-      lineSpacing: 8
+      lineSpacing: 7
     }).setOrigin(0.5);
     modal.add(subtitle);
 
-    // Botón principal: Reiniciar Nivel 2
-    const btnWidth = 360;
-    const btnHeight = 52;
-    const btnBg = this.add.graphics();
-    btnBg.fillStyle(0x1b4332, 1);
-    btnBg.fillRoundedRect(-btnWidth / 2, 20, btnWidth, btnHeight, 12);
-    btnBg.lineStyle(2.5, 0x52b788, 1);
-    btnBg.strokeRoundedRect(-btnWidth / 2, 20, btnWidth, btnHeight, 12);
-    modal.add(btnBg);
+    // Botón destacado: Avanzar al Nivel 3 (Abismo Marino)
+    const btnWidth = 380;
+    const btnHeight = 48;
+    const btnNivel3Bg = this.add.graphics();
+    btnNivel3Bg.fillStyle(0x003049, 1);
+    btnNivel3Bg.fillRoundedRect(-btnWidth / 2, -22, btnWidth, btnHeight, 12);
+    btnNivel3Bg.lineStyle(2.5, 0x48cae4, 1);
+    btnNivel3Bg.strokeRoundedRect(-btnWidth / 2, -22, btnWidth, btnHeight, 12);
+    modal.add(btnNivel3Bg);
 
-    const btnText = this.add.text(0, 46, '🔄 Volver a Desafiar el Nivel 2', {
+    const btnNivel3Text = this.add.text(0, 2, '🌊 Avanzar al Nivel 3: Abismo Marino', {
       fontFamily: 'sans-serif',
       fontSize: '16px',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5);
+    modal.add(btnNivel3Text);
+
+    const btnN3Hit = this.add.zone(0, 2, btnWidth, btnHeight).setInteractive({ useHandCursor: true });
+    btnN3Hit.on('pointerdown', () => {
+      this.startLevel(3);
+    });
+    modal.add(btnN3Hit);
+
+    // Botón secundario: Reiniciar Nivel 2
+    const btnBg = this.add.graphics();
+    btnBg.fillStyle(0x1b4332, 1);
+    btnBg.fillRoundedRect(-btnWidth / 2, 45, btnWidth, btnHeight, 12);
+    btnBg.lineStyle(2, 0x52b788, 1);
+    btnBg.strokeRoundedRect(-btnWidth / 2, 45, btnWidth, btnHeight, 12);
+    modal.add(btnBg);
+
+    const btnText = this.add.text(0, 69, '🔄 Volver a Desafiar el Nivel 2', {
+      fontFamily: 'sans-serif',
+      fontSize: '15px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
     modal.add(btnText);
 
-    const btnHit = this.add.zone(0, 46, btnWidth, btnHeight).setInteractive({ useHandCursor: true });
+    const btnHit = this.add.zone(0, 69, btnWidth, btnHeight).setInteractive({ useHandCursor: true });
     btnHit.on('pointerdown', () => {
       this.startLevel(2);
     });
     modal.add(btnHit);
 
-    // Botón secundario: Volver a Nivel 1
-    const btnSec = this.add.text(0, 125, '🌱 Explorar Nivel 1 (Pacífico)', {
+    // Botón terciario: Volver a Nivel 1
+    const btnSec = this.add.text(0, 140, '🌱 Explorar Nivel 1 (Pacífico)', {
       fontFamily: 'sans-serif',
       fontSize: '14px',
       color: '#95d5b2'
@@ -1021,8 +1192,8 @@ export class GameScene extends Phaser.Scene {
     const w = this.MINIMAP_W;
     const h = this.MINIMAP_H;
 
-    // En Nivel 2: Puntos rojos para depredadores patrullando y Jefe Final
-    if (this.currentLevel === 2) {
+    // En Nivel 2 y 3: Puntos rojos/púrpura para depredadores y Jefes Finales
+    if (this.currentLevel === 2 || this.currentLevel === 3) {
       this.predatorGroup.children.iterate((child) => {
         const pred = child as any;
         if (pred && pred.active) {
@@ -1044,6 +1215,15 @@ export class GameScene extends Phaser.Scene {
         this.minimapDynamicGfx.lineStyle(1.5, 0xffd166, 1);
         this.minimapDynamicGfx.strokeCircle(x + w / 2, dotY, 4.5);
       }
+
+      if (this.bossSquid && this.bossSquid.active) {
+        const ratio = Phaser.Math.Clamp(this.bossSquid.y / WORLD_HEIGHT, 0, 1);
+        const dotY = y + ratio * h;
+        this.minimapDynamicGfx.fillStyle(0x7209b7, 1);
+        this.minimapDynamicGfx.fillCircle(x + w / 2, dotY, 4.5);
+        this.minimapDynamicGfx.lineStyle(1.5, 0x4cc9f0, 1);
+        this.minimapDynamicGfx.strokeCircle(x + w / 2, dotY, 4.5);
+      }
     }
 
     // Marcador brillante en tiempo real del jugador (punto blanco/amarillo con borde)
@@ -1063,6 +1243,7 @@ export class GameScene extends Phaser.Scene {
 
   public startLevel(level: number): void {
     this.currentLevel = level;
+    this.setHUDVisible(true);
     this.updateLevelHUD();
 
     if (this.victoryModal) {
@@ -1070,10 +1251,20 @@ export class GameScene extends Phaser.Scene {
       this.victoryModal = null;
     }
 
-    // Limpieza de Jefe Final si existía
+    if (this.coronationCinematic) {
+      this.coronationCinematic.destroy();
+      this.coronationCinematic = null;
+    }
+    this.isInputFrozen = false;
+
+    // Limpieza de Jefes Finales si existían
     if (this.boss) {
       this.boss.destroy();
       this.boss = null;
+    }
+    if (this.bossSquid) {
+      this.bossSquid.destroy();
+      this.bossSquid = null;
     }
     this.bossFightActive = false;
     if (this.bossHealthContainer) {
@@ -1101,8 +1292,8 @@ export class GameScene extends Phaser.Scene {
     // Regenerar el ecosistema para el nivel elegido
     this.foodManager.setLevel(level);
 
-    // En Nivel 2, activar depredadores patrullando
-    if (level === 2) {
+    // En Nivel 2 y 3, activar depredadores patrullando
+    if (level === 2 || level === 3) {
       this.spawnPredators();
     } else {
       this.predatorGroup.clear(true, true);
@@ -1125,18 +1316,30 @@ export class GameScene extends Phaser.Scene {
     if (!this.levelText || !this.levelBadgeBg) return;
 
     this.levelBadgeBg.clear();
-    const isLevel2 = this.currentLevel === 2;
-    const bgColor = isLevel2 ? 0x2b0909 : 0x05140d;
-    const strokeColor = isLevel2 ? 0xe63946 : 0x52b788;
-    const textColor = isLevel2 ? '#ff758f' : '#95d5b2';
+    let bgColor = 0x05140d;
+    let strokeColor = 0x52b788;
+    let textColor = '#95d5b2';
+    let text = '🌱 Nivel: 1 (Exploración)';
+
+    if (this.currentLevel === 2) {
+      bgColor = 0x2b0909;
+      strokeColor = 0xe63946;
+      textColor = '#ff758f';
+      text = '⚠️ Nivel: 2 (Manglar Hostil)';
+    } else if (this.currentLevel === 3) {
+      bgColor = 0x051026;
+      strokeColor = 0x4cc9f0;
+      textColor = '#4cc9f0';
+      text = '🌊 Nivel: 3 (Abismo Marino)';
+    }
 
     this.levelBadgeBg.fillStyle(bgColor, 0.88);
-    this.levelBadgeBg.fillRoundedRect(480, 18, 225, 36, 10);
+    this.levelBadgeBg.fillRoundedRect(480, 18, 235, 36, 10);
     this.levelBadgeBg.lineStyle(2, strokeColor, 0.9);
-    this.levelBadgeBg.strokeRoundedRect(480, 18, 225, 36, 10);
+    this.levelBadgeBg.strokeRoundedRect(480, 18, 235, 36, 10);
 
     this.levelText.setColor(textColor);
-    this.levelText.setText(isLevel2 ? '⚠️ Nivel: 2 (Manglar Hostil)' : '🌱 Nivel: 1 (Exploración)');
+    this.levelText.setText(text);
   }
 
   private updateAbilityHUD(): void {
@@ -1292,10 +1495,15 @@ export class GameScene extends Phaser.Scene {
       if (this.currentLevel === 1) {
         // En Nivel 1: Victoria directa con opción a Nivel 2
         this.showVictoryModal();
-      } else {
+      } else if (this.currentLevel === 2) {
         // En Nivel 2: Iniciar enfrentamiento con el Jefe Final en el Dosel
         if (!this.bossFightActive && !this.boss) {
           this.startBossFight();
+        }
+      } else if (this.currentLevel === 3) {
+        // En Nivel 3: Iniciar enfrentamiento con el Calamar Gigante en el Abismo
+        if (!this.bossFightActive && !this.bossSquid) {
+          this.startSquidBossFight();
         }
       }
     });
@@ -1311,6 +1519,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   public override update(time: number, delta: number): void {
+    // 0. Si el input está congelado (por cinemática de coronación)
+    if (this.isInputFrozen) {
+      this.player.handleInput({
+        left: false,
+        leftJustDown: false,
+        right: false,
+        rightJustDown: false,
+        up: false,
+        down: false,
+        jump: false,
+        jumpJustDown: false,
+        action: false,
+        actionJustDown: false
+      }, delta);
+      this.player.setVelocity(0, 0);
+      return;
+    }
+
     // 1. Físicas condicionales por estrato: Agua (y > 1550) vs Tierra / Aire (y <= 1550)
     const inAquaticStratum = this.player.y > 1550 || this.physics.overlap(this.player, this.waterZone);
     if (inAquaticStratum !== this.player.isInWater) {
@@ -1396,6 +1622,9 @@ export class GameScene extends Phaser.Scene {
     // 6. Actualizar al Jefe Final si está activo
     if (this.boss && this.bossFightActive) {
       this.boss.updateBoss(delta, this.player.x, this.player.y);
+    }
+    if (this.bossSquid && this.bossFightActive) {
+      this.bossSquid.updateBoss(delta, this.player.x, this.player.y);
     }
 
     // 7. Seguimiento suave vertical con cameraY
