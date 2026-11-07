@@ -48,6 +48,7 @@ export class GameScene extends Phaser.Scene {
   public gameState: 'INTRO_CINEMATIC' | 'PLAYING' = 'INTRO_CINEMATIC';
   public liamIntroCinematic: LiamIntroCinematic | null = null;
   public touchControlsContainer: Phaser.GameObjects.Container | null = null;
+  public hudContainer: Phaser.GameObjects.Container | null = null;
   public isInputFrozen: boolean = false;
   public coronationCinematic: CoronationCinematic | null = null;
 
@@ -1177,6 +1178,8 @@ export class GameScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setScrollFactor(0);
 
+    this.hudContainer?.add([bg, btnText]);
+
     btnText.setInteractive({ useHandCursor: true });
     btnText.on('pointerdown', () => {
       this.playLiamIntroCinematic();
@@ -1202,6 +1205,20 @@ export class GameScene extends Phaser.Scene {
   /**
    * Inicia la cinemática animada estilo Kirby del origen de la Tierra dedicada a Liam.
    */
+  /**
+   * Oculta o muestra por completo el mundo del juego y todos los elementos del HUD.
+   * Evita que se asome el agua, personajes, plataformas o altímetro durante las cinemáticas.
+   */
+  public setGameRenderingVisible(visible: boolean): void {
+    this.cameras.main.setVisible(visible);
+    this.hudContainer?.setVisible(visible);
+    this.minimapStaticGfx?.setVisible(visible);
+    this.minimapDynamicGfx?.setVisible(visible);
+    if (this.touchControlsContainer) {
+      this.touchControlsContainer.setVisible(visible);
+    }
+  }
+
   public playLiamIntroCinematic(): void {
     if (this.liamIntroCinematic) {
       this.liamIntroCinematic.destroy();
@@ -1210,7 +1227,7 @@ export class GameScene extends Phaser.Scene {
 
     this.gameState = 'INTRO_CINEMATIC';
     this.isInputFrozen = true;
-    this.touchControlsContainer?.setVisible(false);
+    this.setGameRenderingVisible(false);
 
     const gameContainer = this.game.canvas.parentElement || document.body;
 
@@ -1219,7 +1236,7 @@ export class GameScene extends Phaser.Scene {
       onStartGame: () => {
         this.isInputFrozen = false;
         this.gameState = 'PLAYING';
-        this.touchControlsContainer?.setVisible(true);
+        this.setGameRenderingVisible(true);
         this.liamIntroCinematic = null;
         this.soundSystem.resume();
         this.soundSystem.playGameStart();
@@ -1335,33 +1352,34 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createHUD(): void {
+    this.hudContainer = this.add.container(0, 0).setScrollFactor(0).setDepth(15000);
+
     const hudBg = this.add.graphics();
     hudBg.fillStyle(0x05140d, 0.88);
     hudBg.fillRoundedRect(18, 18, 440, 114, 14);
     hudBg.lineStyle(2.5, 0x52b788, 0.9);
     hudBg.strokeRoundedRect(18, 18, 440, 114, 14);
-    hudBg.setScrollFactor(0);
 
     const titleStyle = { fontFamily: 'sans-serif', fontSize: '18px', color: '#95d5b2', fontStyle: 'bold' };
     const labelStyle = { fontFamily: 'sans-serif', fontSize: '14px', color: '#d8f3dc' };
 
-    this.phaseText = this.add.text(34, 28, 'Fase 1: Hongo del Manglar', titleStyle).setScrollFactor(0);
-    this.targetFoodText = this.add.text(34, 56, 'Dieta actual: Mosca Pequeña', labelStyle).setScrollFactor(0);
+    this.phaseText = this.add.text(34, 28, 'Fase 1: Hongo del Manglar', titleStyle);
+    this.targetFoodText = this.add.text(34, 56, 'Dieta actual: Mosca Pequeña', labelStyle);
 
-    this.add.text(34, 82, 'Evolución:', labelStyle).setScrollFactor(0);
-    this.add.rectangle(116, 92, 250, 18, 0x1b4332).setOrigin(0, 0.5).setScrollFactor(0);
-    this.progressBarFill = this.add.rectangle(116, 92, 248, 14, 0x52b788).setOrigin(0, 0.5).setScrollFactor(0);
+    const evoLabel = this.add.text(34, 82, 'Evolución:', labelStyle);
+    const evoBg = this.add.rectangle(116, 92, 250, 18, 0x1b4332).setOrigin(0, 0.5);
+    this.progressBarFill = this.add.rectangle(116, 92, 248, 14, 0x52b788).setOrigin(0, 0.5);
     this.progressBarFill.setScale(0, 1);
-    this.progressPercentText = this.add.text(376, 83, '0%', { fontFamily: 'sans-serif', fontSize: '15px', color: '#ffffff', fontStyle: 'bold' }).setScrollFactor(0);
+    this.progressPercentText = this.add.text(376, 83, '0%', { fontFamily: 'sans-serif', fontSize: '15px', color: '#ffffff', fontStyle: 'bold' });
 
     // Indicador y selector interactivo de Nivel (Nivel 1: Exploración / Nivel 2: Manglar Hostil)
-    this.levelBadgeBg = this.add.graphics().setScrollFactor(0);
+    this.levelBadgeBg = this.add.graphics();
     this.levelText = this.add.text(495, 27, '🌱 Nivel: 1 (Exploración)', {
       fontFamily: 'sans-serif',
       fontSize: '13px',
       color: '#95d5b2',
       fontStyle: 'bold'
-    }).setScrollFactor(0);
+    });
 
     this.levelText.setInteractive({ useHandCursor: true });
     this.levelText.on('pointerdown', () => {
@@ -1371,32 +1389,48 @@ export class GameScene extends Phaser.Scene {
     this.updateLevelHUD();
 
     // Barra e indicador de Habilidad Activa (Shift / Clic Derecho)
-    this.abilityBadgeBg = this.add.graphics().setScrollFactor(0);
-    this.abilityBarFill = this.add.rectangle(730, 42, 136, 6, 0x52b788).setOrigin(0, 0.5).setScrollFactor(0);
+    this.abilityBadgeBg = this.add.graphics();
+    this.abilityBarFill = this.add.rectangle(730, 42, 136, 6, 0x52b788).setOrigin(0, 0.5);
     this.abilityText = this.add.text(730, 22, '⚡ Habilidad: LISTA', {
       fontFamily: 'sans-serif',
       fontSize: '12px',
       color: '#95d5b2',
       fontStyle: 'bold'
-    }).setScrollFactor(0);
+    });
     this.abilityText.setInteractive({ useHandCursor: true });
     this.abilityText.on('pointerdown', () => {
       this.triggerPlayerAbility();
     });
     this.updateAbilityHUD();
 
-    // Botón especial en el HUD: 🎬 Historia de Liam
-    this.createLiamStoryHUDButton();
-
     const hintBg = this.add.graphics();
     hintBg.fillStyle(0x05140d, 0.75);
     hintBg.fillRoundedRect(900, 16, 360, 42, 8);
-    hintBg.setScrollFactor(0);
-    this.add.text(910, 27, '🎮 Controles: Flechas/WASD | Habilidad: Shift/Clic Der', {
+    const hintText = this.add.text(910, 27, '🎮 Controles: Flechas/WASD | Habilidad: Shift/Clic Der', {
       fontFamily: 'sans-serif',
       fontSize: '12px',
       color: '#b7e4c7'
-    }).setScrollFactor(0);
+    });
+
+    this.hudContainer.add([
+      hudBg,
+      this.phaseText,
+      this.targetFoodText,
+      evoLabel,
+      evoBg,
+      this.progressBarFill,
+      this.progressPercentText,
+      this.levelBadgeBg,
+      this.levelText,
+      this.abilityBadgeBg,
+      this.abilityBarFill,
+      this.abilityText,
+      hintBg,
+      hintText
+    ]);
+
+    // Botón especial en el HUD: 🎬 Historia de Liam
+    this.createLiamStoryHUDButton();
   }
 
   /**
