@@ -6,6 +6,7 @@ import { MushroomState } from './states/MushroomState';
 import { TadpoleState } from './states/TadpoleState';
 import { FrogState } from './states/FrogState';
 import { DragonflyState } from './states/DragonflyState';
+import { SharkState } from './states/SharkState';
 import { EventBus } from '../../core/events/EventBus';
 
 /**
@@ -24,6 +25,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   private _isInWater: boolean = false;
   private _facingDirection: 1 | -1 = 1;
   private squashTween: Phaser.Tweens.Tween | null = null;
+  private baseScaleX: number = 1;
+  private baseScaleY: number = 1;
   private groundedGraceTimer: number = 0;
   private invulnerableTimer: number = 0;
 
@@ -51,7 +54,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
       .registerState(new MushroomState())
       .registerState(new TadpoleState())
       .registerState(new FrogState())
-      .registerState(new DragonflyState());
+      .registerState(new DragonflyState())
+      .registerState(new SharkState());
 
     this.stateMachine.start(EvolutionPhase.MUSHROOM);
   }
@@ -108,7 +112,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
 
   public setFacingDirection(dir: 1 | -1): void {
     this._facingDirection = dir;
-    this.visualSprite.setFlipX(dir === -1);
+    // tiburon.png, libelula.png, avispa.png miran hacia la DERECHA originalmente
+    // pez_naranja.png, pez_celeste.png miran hacia la IZQUIERDA originalmente
+    // hongo.png mira de frente (simétrico)
+    const phase = this.currentPhase;
+    const looksLeftOriginally = (phase === EvolutionPhase.TADPOLE || phase === EvolutionPhase.FROG);
+
+    if (looksLeftOriginally) {
+      this.visualSprite.setFlipX(dir === 1);
+    } else {
+      this.visualSprite.setFlipX(dir === -1);
+    }
   }
 
   public getStateMachine(): PlayerStateMachine {
@@ -121,11 +135,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     if (this.squashTween) {
       this.squashTween.stop();
     }
-    this.visualSprite.setScale(scaleX, scaleY);
+    this.visualSprite.setScale(this.baseScaleX * scaleX, this.baseScaleY * scaleY);
     this.squashTween = this.scene.tweens.add({
       targets: this.visualSprite,
-      scaleX: 1,
-      scaleY: 1,
+      scaleX: this.baseScaleX,
+      scaleY: this.baseScaleY,
       duration: duration,
       ease: 'Back.easeOut',
       easeParams: [2.5],
@@ -137,10 +151,39 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
 
   public setVisualTexture(textureKey: string): void {
     this.visualSprite.setTexture(textureKey);
+
+    // Ajustar dimensiones óptimas de renderizado según el sprite
+    switch (textureKey) {
+      case 'player_mushroom':
+      case 'sprite_hongo':
+        this.visualSprite.setDisplaySize(58, 56);
+        break;
+      case 'player_tadpole':
+      case 'sprite_pez_celeste':
+        this.visualSprite.setDisplaySize(62, 58);
+        break;
+      case 'player_frog':
+      case 'sprite_pez_naranja':
+        this.visualSprite.setDisplaySize(64, 64);
+        break;
+      case 'player_dragonfly':
+      case 'sprite_libelula':
+        this.visualSprite.setDisplaySize(72, 60);
+        break;
+      case 'player_shark':
+      case 'sprite_tiburon':
+        this.visualSprite.setDisplaySize(88, 70);
+        break;
+      default:
+        break;
+    }
+    this.baseScaleX = Math.abs(this.visualSprite.scaleX);
+    this.baseScaleY = Math.abs(this.visualSprite.scaleY);
+    this.setFacingDirection(this._facingDirection);
   }
 
   public updateVisualTexture(textureKey: string): void {
-    this.visualSprite.setTexture(textureKey);
+    this.setVisualTexture(textureKey);
   }
 
   public setVisualTint(color: number): void {

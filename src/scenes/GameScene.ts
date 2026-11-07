@@ -250,6 +250,7 @@ export class GameScene extends Phaser.Scene {
       case EvolutionPhase.TADPOLE: return 2;
       case EvolutionPhase.FROG: return 3;
       case EvolutionPhase.DRAGONFLY: return 4;
+      case EvolutionPhase.SHARK: return 5;
       default: return 1;
     }
   }
@@ -286,6 +287,9 @@ export class GameScene extends Phaser.Scene {
         break;
       case EvolutionPhase.DRAGONFLY:
         this.executeDragonflySupersonicDash();
+        break;
+      case EvolutionPhase.SHARK:
+        this.executeSharkTorpedousDash();
         break;
     }
 
@@ -393,6 +397,38 @@ export class GameScene extends Phaser.Scene {
         });
       });
     }
+  }
+
+  // --- HABILIDAD 5: Embestida Hidrodinámica de Tiburón (Fase 5) ---
+  private executeSharkTorpedousDash(): void {
+    const targetX = this.input.activePointer.worldX || (this.player.x + this.player.facingDirection * 400);
+    const targetY = this.input.activePointer.worldY || this.player.y;
+    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY);
+    const speed = 960;
+
+    this.player.startDash(400);
+    this.player.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    this.player.triggerSquashAndStretch(1.5, 0.65, 180);
+
+    for (let i = 0; i < 7; i++) {
+      this.time.delayedCall(i * 30, () => {
+        const ghost = this.add.sprite(this.player.x, this.player.y, 'player_shark');
+        ghost.setDisplaySize(88, 70);
+        ghost.setAlpha(0.6);
+        ghost.setTint(0x48cae4);
+        ghost.setFlipX(this.player.facingDirection === -1);
+        this.tweens.add({
+          targets: ghost,
+          alpha: 0,
+          scaleX: ghost.scaleX * 1.3,
+          scaleY: ghost.scaleY * 0.7,
+          duration: 260,
+          onComplete: () => ghost.destroy()
+        });
+      });
+    }
+
+    this.particleSystem.emitSplashParticles(this.player.x, this.player.y);
   }
 
   // ==========================================
@@ -1277,6 +1313,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Reiniciar al jugador a Fase 1 (Hongo del Manglar en y = 1450, evolución 0%)
+    this.evolutionManager.setLevel(level);
     this.evolutionManager.reset();
     const phaseInfo = PHASE_CONFIGURATIONS[this.evolutionManager.currentPhase];
     this.phaseText.setText(`Fase 1: ${phaseInfo.displayName}`);
@@ -1483,7 +1520,8 @@ export class GameScene extends Phaser.Scene {
 
     EventBus.on('evolution:transition', (data) => {
       const phaseInfo = PHASE_CONFIGURATIONS[data.newPhase];
-      this.phaseText.setText(`Fase: ${phaseInfo.displayName}`);
+      const phaseRank = this.getPlayerPhaseRank();
+      this.phaseText.setText(`Fase ${phaseRank}: ${phaseInfo.displayName}`);
       this.targetFoodText.setText(`Dieta actual: ${this.getFoodLabel(data.targetFood)}`);
       this.cameras.main.flash(350, 255, 255, 255);
       this.soundSystem.playEvolve();
@@ -1491,7 +1529,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     EventBus.on('evolution:completed', () => {
-      this.phaseText.setText('¡Evolución Cúspide: Libélula!');
+      const phaseName = this.evolutionManager.currentPhase === EvolutionPhase.SHARK
+        ? 'Tiburón Soberano'
+        : 'Libélula Depredadora';
+      this.phaseText.setText(`🌟 ¡Evolución Cúspide: ${phaseName}!`);
       if (this.currentLevel === 1) {
         // En Nivel 1: Victoria directa con opción a Nivel 2
         this.showVictoryModal();
@@ -1512,7 +1553,7 @@ export class GameScene extends Phaser.Scene {
   private getFoodLabel(food: FoodType): string {
     switch (food) {
       case FoodType.FLY: return 'Mosca Pequeña (Fase 1)';
-      case FoodType.FISH: return 'Pez Morado (Fase 2)';
+      case FoodType.FISH: return 'Pez del Manglar (Fase 2 / 5)';
       case FoodType.BIG_FLY: return 'Mosca Grande (Fase 3)';
       case FoodType.WASP: return 'Avispa Amarilla (Fase 4)';
     }

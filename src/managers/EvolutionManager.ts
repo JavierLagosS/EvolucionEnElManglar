@@ -16,11 +16,20 @@ import { PlayerStateMachine } from '../core/state-machine/PlayerStateMachine';
 export class EvolutionManager implements IEvolutionManager {
   private _currentPhase: EvolutionPhase;
   private _currentFoodCount: number = 0;
+  private _level: number = 1;
   private readonly stateMachine: PlayerStateMachine;
 
   constructor(stateMachine: PlayerStateMachine, initialPhase: EvolutionPhase = EvolutionPhase.MUSHROOM) {
     this.stateMachine = stateMachine;
     this._currentPhase = initialPhase;
+  }
+
+  public setLevel(level: number): void {
+    this._level = level;
+  }
+
+  public get level(): number {
+    return this._level;
   }
 
   public get currentPhase(): EvolutionPhase {
@@ -38,6 +47,9 @@ export class EvolutionManager implements IEvolutionManager {
   }
 
   public get isMaxEvolution(): boolean {
+    if (this._level < 3 && this._currentPhase === EvolutionPhase.DRAGONFLY) {
+      return true;
+    }
     return EVOLUTION_CHAIN[this._currentPhase] === null;
   }
 
@@ -100,7 +112,10 @@ export class EvolutionManager implements IEvolutionManager {
    * Transiciona a la siguiente fase de la cadena evolutiva.
    */
   public evolveNext(): EvolutionPhase | null {
-    const nextPhase = EVOLUTION_CHAIN[this._currentPhase];
+    let nextPhase = EVOLUTION_CHAIN[this._currentPhase];
+    if (this._level < 3 && this._currentPhase === EvolutionPhase.DRAGONFLY) {
+      nextPhase = null;
+    }
 
     if (!nextPhase) {
       EventBus.emit('evolution:completed', { finalPhase: this._currentPhase });
