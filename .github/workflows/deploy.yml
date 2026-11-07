@@ -1,0 +1,53 @@
+name: Desplegar en GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+# Permisos requeridos para desplegar en GitHub Pages mediante GitHub Actions
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Permite un despliegue concurrente a la vez y cancela los intermedios
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar proyecto para producción (Vite + TS)
+        run: npm run build
+
+      - name: Configurar entorno de GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir artefacto estático (carpeta dist)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: Desplegar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
