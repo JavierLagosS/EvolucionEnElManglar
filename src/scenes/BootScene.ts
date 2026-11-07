@@ -22,7 +22,10 @@ export class BootScene extends Phaser.Scene {
       'calamar',
       'avispa',
       'rana',
-      'mosca'
+      'mosca',
+      'martin_pescador',
+      'rana_depredadora',
+      'pez_depredador'
     ];
     spriteNames.forEach((name) => {
       const img = new Image();
@@ -48,6 +51,13 @@ export class BootScene extends Phaser.Scene {
     // Jefe Calamar Gigante
     this.load.image('boss_squid', '/assets/sprites/calamar.png');
 
+    // Jefe Nivel 2: Martín Pescador Gigante
+    this.load.image('boss_kingfisher', '/assets/sprites/martin_pescador.png');
+
+    // Depredadores Nivel 2
+    this.load.image('predator_fish', '/assets/sprites/pez_depredador.png');
+    this.load.image('hunter_frog', '/assets/sprites/rana_depredadora.png');
+
     // Nombres directos para acceso global
     this.load.image('sprite_hongo', '/assets/sprites/hongo.png');
     this.load.image('sprite_pez_celeste', '/assets/sprites/pez_celeste.png');
@@ -59,6 +69,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image('sprite_avispa', '/assets/sprites/avispa.png');
     this.load.image('sprite_rana', '/assets/sprites/rana.png');
     this.load.image('sprite_mosca', '/assets/sprites/mosca.png');
+    this.load.image('sprite_martin_pescador', '/assets/sprites/martin_pescador.png');
+    this.load.image('sprite_rana_depredadora', '/assets/sprites/rana_depredadora.png');
+    this.load.image('sprite_pez_depredador', '/assets/sprites/pez_depredador.png');
   }
 
   public create(): void {
@@ -368,115 +381,121 @@ export class BootScene extends Phaser.Scene {
     // 7. DEPREDADORES DEL NIVEL 2
     // ==========================================
     // Pez Depredador Grande (76 x 40)
-    gfx.clear();
-    gfx.lineStyle(3, 0x1a0509, 1);
-    gfx.fillStyle(0x590d22, 1);
-    gfx.beginPath();
-    gfx.moveTo(22, 20);
-    gfx.lineTo(6, 6);
-    gfx.lineTo(12, 20);
-    gfx.lineTo(6, 34);
-    gfx.closePath();
-    gfx.fill();
-    gfx.stroke();
-    gfx.fillEllipse(44, 20, 28, 15);
-    gfx.strokeEllipse(44, 20, 28, 15);
-    gfx.fillStyle(0x800f2f, 1);
-    gfx.fillTriangle(42, 6, 52, 6, 48, 0);
-    gfx.fillTriangle(32, 6, 42, 6, 38, 2);
-    gfx.fillStyle(0xffffff, 1);
-    gfx.fillTriangle(64, 18, 68, 18, 66, 23);
-    gfx.fillTriangle(58, 18, 62, 18, 60, 22);
-    gfx.fillStyle(0xffea00, 1);
-    gfx.fillCircle(54, 15, 5);
-    gfx.fillStyle(0xd90429, 1);
-    gfx.fillCircle(55, 15, 2.5);
-    gfx.generateTexture('predator_fish', 76, 40);
+    if (!this.textures.exists('predator_fish')) {
+      gfx.clear();
+      gfx.lineStyle(3, 0x1a0509, 1);
+      gfx.fillStyle(0x590d22, 1);
+      gfx.beginPath();
+      gfx.moveTo(22, 20);
+      gfx.lineTo(6, 6);
+      gfx.lineTo(12, 20);
+      gfx.lineTo(6, 34);
+      gfx.closePath();
+      gfx.fill();
+      gfx.stroke();
+      gfx.fillEllipse(44, 20, 28, 15);
+      gfx.strokeEllipse(44, 20, 28, 15);
+      gfx.fillStyle(0x800f2f, 1);
+      gfx.fillTriangle(42, 6, 52, 6, 48, 0);
+      gfx.fillTriangle(32, 6, 42, 6, 38, 2);
+      gfx.fillStyle(0xffffff, 1);
+      gfx.fillTriangle(64, 18, 68, 18, 66, 23);
+      gfx.fillTriangle(58, 18, 62, 18, 60, 22);
+      gfx.fillStyle(0xffea00, 1);
+      gfx.fillCircle(54, 15, 5);
+      gfx.fillStyle(0xd90429, 1);
+      gfx.fillCircle(55, 15, 2.5);
+      gfx.generateTexture('predator_fish', 76, 40);
+    }
 
     // Rana Cazadora (64 x 50)
-    gfx.clear();
-    gfx.lineStyle(3, 0x05140b, 1);
-    gfx.fillStyle(0x132a13, 1);
-    gfx.fillCircle(20, 14, 9);
-    gfx.strokeCircle(20, 14, 9);
-    gfx.fillCircle(44, 14, 9);
-    gfx.strokeCircle(44, 14, 9);
-    gfx.fillStyle(0xffd000, 1);
-    gfx.fillCircle(20, 14, 6);
-    gfx.fillCircle(44, 14, 6);
-    gfx.fillStyle(0x000000, 1);
-    gfx.fillRect(19, 9, 2.5, 10);
-    gfx.fillRect(43, 9, 2.5, 10);
-    gfx.fillStyle(0x1b4332, 1);
-    gfx.fillRoundedRect(8, 20, 48, 26, 12);
-    gfx.strokeRoundedRect(8, 20, 48, 26, 12);
-    gfx.fillStyle(0xd90429, 0.9);
-    gfx.fillCircle(22, 28, 4);
-    gfx.fillCircle(42, 28, 4);
-    gfx.fillCircle(32, 36, 5);
-    gfx.generateTexture('hunter_frog', 64, 50);
+    if (!this.textures.exists('hunter_frog')) {
+      gfx.clear();
+      gfx.lineStyle(3, 0x05140b, 1);
+      gfx.fillStyle(0x132a13, 1);
+      gfx.fillCircle(20, 14, 9);
+      gfx.strokeCircle(20, 14, 9);
+      gfx.fillCircle(44, 14, 9);
+      gfx.strokeCircle(44, 14, 9);
+      gfx.fillStyle(0xffd000, 1);
+      gfx.fillCircle(20, 14, 6);
+      gfx.fillCircle(44, 14, 6);
+      gfx.fillStyle(0x000000, 1);
+      gfx.fillRect(19, 9, 2.5, 10);
+      gfx.fillRect(43, 9, 2.5, 10);
+      gfx.fillStyle(0x1b4332, 1);
+      gfx.fillRoundedRect(8, 20, 48, 26, 12);
+      gfx.strokeRoundedRect(8, 20, 48, 26, 12);
+      gfx.fillStyle(0xd90429, 0.9);
+      gfx.fillCircle(22, 28, 4);
+      gfx.fillCircle(42, 28, 4);
+      gfx.fillCircle(32, 36, 5);
+      gfx.generateTexture('hunter_frog', 64, 50);
+    }
 
     // ==========================================
     // 8. JEFE FINAL: MARTÍN PESCADOR GIGANTE (96 x 64)
     // ==========================================
-    gfx.clear();
-    gfx.lineStyle(3.5, 0x031926, 1);
+    if (!this.textures.exists('boss_kingfisher')) {
+      gfx.clear();
+      gfx.lineStyle(3.5, 0x031926, 1);
 
-    // Cola con plumas azul marino
-    gfx.fillStyle(0x003566, 1);
-    gfx.fillTriangle(20, 36, 4, 30, 4, 44);
-    gfx.strokeTriangle(20, 36, 4, 30, 4, 44);
+      // Cola con plumas azul marino
+      gfx.fillStyle(0x003566, 1);
+      gfx.fillTriangle(20, 36, 4, 30, 4, 44);
+      gfx.strokeTriangle(20, 36, 4, 30, 4, 44);
 
-    // Vientre naranja intenso
-    gfx.fillStyle(0xf77f00, 1);
-    gfx.fillEllipse(44, 38, 30, 18);
-    gfx.strokeEllipse(44, 38, 30, 18);
+      // Vientre naranja intenso
+      gfx.fillStyle(0xf77f00, 1);
+      gfx.fillEllipse(44, 38, 30, 18);
+      gfx.strokeEllipse(44, 38, 30, 18);
 
-    // Cuerpo azul rey
-    gfx.fillStyle(0x0077b6, 1);
-    gfx.fillEllipse(42, 30, 32, 16);
-    gfx.strokeEllipse(42, 30, 32, 16);
+      // Cuerpo azul rey
+      gfx.fillStyle(0x0077b6, 1);
+      gfx.fillEllipse(42, 30, 32, 16);
+      gfx.strokeEllipse(42, 30, 32, 16);
 
-    // Ala cian con plumas superpuestas
-    gfx.fillStyle(0x48cae4, 1);
-    gfx.beginPath();
-    gfx.moveTo(30, 24);
-    gfx.lineTo(58, 26);
-    gfx.lineTo(44, 44);
-    gfx.lineTo(24, 38);
-    gfx.closePath();
-    gfx.fill();
-    gfx.stroke();
+      // Ala cian con plumas superpuestas
+      gfx.fillStyle(0x48cae4, 1);
+      gfx.beginPath();
+      gfx.moveTo(30, 24);
+      gfx.lineTo(58, 26);
+      gfx.lineTo(44, 44);
+      gfx.lineTo(24, 38);
+      gfx.closePath();
+      gfx.fill();
+      gfx.stroke();
 
-    // Cabeza con cresta azul oscura
-    gfx.fillStyle(0x023e8a, 1);
-    gfx.fillCircle(62, 22, 18);
-    gfx.strokeCircle(62, 22, 18);
+      // Cabeza con cresta azul oscura
+      gfx.fillStyle(0x023e8a, 1);
+      gfx.fillCircle(62, 22, 18);
+      gfx.strokeCircle(62, 22, 18);
 
-    // Cresta superior de plumas
-    gfx.fillTriangle(52, 6, 62, 2, 58, 12);
-    gfx.fillTriangle(60, 4, 70, 4, 66, 12);
+      // Cresta superior de plumas
+      gfx.fillTriangle(52, 6, 62, 2, 58, 12);
+      gfx.fillTriangle(60, 4, 70, 4, 66, 12);
 
-    // Gran pico naranja daga afilado hacia adelante
-    gfx.fillStyle(0xf77f00, 1);
-    gfx.beginPath();
-    gfx.moveTo(76, 18);
-    gfx.lineTo(95, 26);
-    gfx.lineTo(74, 32);
-    gfx.closePath();
-    gfx.fill();
-    gfx.stroke();
+      // Gran pico naranja daga afilado hacia adelante
+      gfx.fillStyle(0xf77f00, 1);
+      gfx.beginPath();
+      gfx.moveTo(76, 18);
+      gfx.lineTo(95, 26);
+      gfx.lineTo(74, 32);
+      gfx.closePath();
+      gfx.fill();
+      gfx.stroke();
 
-    // Ojo feroz con resplandor dorado
-    gfx.fillStyle(0xffea00, 1);
-    gfx.fillCircle(66, 20, 6.5);
-    gfx.strokeCircle(66, 20, 6.5);
-    gfx.fillStyle(0xd90429, 1);
-    gfx.fillCircle(67, 20, 3.5);
-    gfx.fillStyle(0xffffff, 1);
-    gfx.fillCircle(66, 18, 1.8);
+      // Ojo feroz con resplandor dorado
+      gfx.fillStyle(0xffea00, 1);
+      gfx.fillCircle(66, 20, 6.5);
+      gfx.strokeCircle(66, 20, 6.5);
+      gfx.fillStyle(0xd90429, 1);
+      gfx.fillCircle(67, 20, 3.5);
+      gfx.fillStyle(0xffffff, 1);
+      gfx.fillCircle(66, 18, 1.8);
 
-    gfx.generateTexture('boss_kingfisher', 96, 64);
+      gfx.generateTexture('boss_kingfisher', 96, 64);
+    }
 
     // ==========================================
     // 9. JEFE FINAL (NIVEL 3): CALAMAR GIGANTE DEL ABISMO (110 x 70)
