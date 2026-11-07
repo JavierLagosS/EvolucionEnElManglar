@@ -10,6 +10,7 @@ import { PredatorFish, HunterFrog } from '../entities/predators/PredatorEntities
 import { BossKingfisher } from '../entities/boss/BossKingfisher';
 import { BossGiantSquid } from '../entities/boss/BossGiantSquid';
 import { CoronationCinematic } from '../cinematics/CoronationCinematic';
+import { LiamIntroCinematic } from '../cinematics/LiamIntroCinematic';
 import { SoundSystem } from '../core/audio/SoundSystem';
 import { ParticleSystem } from '../core/particles/ParticleSystem';
 
@@ -43,7 +44,9 @@ export class GameScene extends Phaser.Scene {
   private bossHealthText!: Phaser.GameObjects.Text;
   private bossAlertBanner: Phaser.GameObjects.Container | null = null;
 
-  // Congelamiento de entrada y cinemática de coronación
+  // Estado del juego y cinemáticas
+  public gameState: 'INTRO_CINEMATIC' | 'PLAYING' = 'INTRO_CINEMATIC';
+  public liamIntroCinematic: LiamIntroCinematic | null = null;
   public isInputFrozen: boolean = false;
   public coronationCinematic: CoronationCinematic | null = null;
 
@@ -166,9 +169,16 @@ export class GameScene extends Phaser.Scene {
     this.createMinimap();
     this.bindDomainEvents();
 
+    // 12. Cinemática de Intro estilo Kirby del Origen de la Tierra (Creado e inspirado por Liam)
+    this.playLiamIntroCinematic();
+
     // Limpieza al cerrar escena
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.foodManager.destroy();
+      if (this.liamIntroCinematic) {
+        this.liamIntroCinematic.destroy();
+        this.liamIntroCinematic = null;
+      }
     });
   }
 
@@ -1148,6 +1158,71 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Crea un botón en el HUD para volver a ver la historia de Liam cuando se desee.
+   */
+  private createLiamStoryHUDButton(): void {
+    const bg = this.add.graphics().setScrollFactor(0);
+    bg.fillStyle(0x0a1f14, 0.9);
+    bg.fillRoundedRect(495, 62, 195, 32, 10);
+    bg.lineStyle(2, 0xffd166, 0.85);
+    bg.strokeRoundedRect(495, 62, 195, 32, 10);
+
+    const btnText = this.add.text(505, 70, '🎬 Historia de Liam', {
+      fontFamily: 'sans-serif',
+      fontSize: '13px',
+      color: '#ffd166',
+      fontStyle: 'bold'
+    }).setScrollFactor(0);
+
+    btnText.setInteractive({ useHandCursor: true });
+    btnText.on('pointerdown', () => {
+      this.playLiamIntroCinematic();
+    });
+    btnText.on('pointerover', () => {
+      btnText.setColor('#ffffff');
+      bg.clear();
+      bg.fillStyle(0x133825, 0.95);
+      bg.fillRoundedRect(495, 62, 195, 32, 10);
+      bg.lineStyle(2.5, 0xffe66d, 1);
+      bg.strokeRoundedRect(495, 62, 195, 32, 10);
+    });
+    btnText.on('pointerout', () => {
+      btnText.setColor('#ffd166');
+      bg.clear();
+      bg.fillStyle(0x0a1f14, 0.9);
+      bg.fillRoundedRect(495, 62, 195, 32, 10);
+      bg.lineStyle(2, 0xffd166, 0.85);
+      bg.strokeRoundedRect(495, 62, 195, 32, 10);
+    });
+  }
+
+  /**
+   * Inicia la cinemática animada estilo Kirby del origen de la Tierra dedicada a Liam.
+   */
+  public playLiamIntroCinematic(): void {
+    if (this.liamIntroCinematic) {
+      this.liamIntroCinematic.destroy();
+      this.liamIntroCinematic = null;
+    }
+
+    this.gameState = 'INTRO_CINEMATIC';
+    this.isInputFrozen = true;
+
+    const gameContainer = this.game.canvas.parentElement || document.body;
+
+    this.liamIntroCinematic = LiamIntroCinematic.start({
+      container: gameContainer,
+      onStartGame: () => {
+        this.isInputFrozen = false;
+        this.gameState = 'PLAYING';
+        this.liamIntroCinematic = null;
+        this.soundSystem.resume();
+        this.soundSystem.playGameStart();
+      }
+    });
+  }
+
   private createHUD(): void {
     const hudBg = this.add.graphics();
     hudBg.fillStyle(0x05140d, 0.88);
@@ -1198,6 +1273,9 @@ export class GameScene extends Phaser.Scene {
       this.triggerPlayerAbility();
     });
     this.updateAbilityHUD();
+
+    // Botón especial en el HUD: 🎬 Historia de Liam
+    this.createLiamStoryHUDButton();
 
     const hintBg = this.add.graphics();
     hintBg.fillStyle(0x05140d, 0.75);
@@ -1599,8 +1677,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   public override update(time: number, delta: number): void {
-    // 0. Si el input está congelado (por cinemática de coronación)
-    if (this.isInputFrozen) {
+    // 0. Si está en la cinemática de Liam o el input está congelado
+    if (this.gameState === 'INTRO_CINEMATIC' || this.isInputFrozen) {
       this.player.handleInput({
         left: false,
         leftJustDown: false,
