@@ -2,24 +2,44 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Evolución en el Manglar</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍄</text></svg>" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Evolución en el Manglar - Liam & Papá Studios</title>
+
+  <!-- Favicon e Iconos -->
+  <link rel="icon" type="image/png" href="./assets/sprites/intro_4_liam_emblema.png" />
+  <link rel="apple-touch-icon" href="./assets/sprites/intro_4_liam_emblema.png" />
+
+  <!-- Metadatos Open Graph / WhatsApp / Redes Sociales -->
+  <meta property="og:title" content="Evolución en el Manglar - Por Liam & Papá Studios" />
+  <meta property="og:description" content="¡Juega la aventura evolutiva creada e inspirada por Liam! Domina el cielo y el abismo marino." />
+  <meta property="og:image" content="./assets/sprites/intro_4_liam_emblema.png" />
+  <meta property="og:type" content="website" />
+
+  <!-- Metadatos Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Evolución en el Manglar - Por Liam & Papá Studios" />
+  <meta name="twitter:description" content="¡Juega la aventura evolutiva creada e inspirada por Liam! Domina el cielo y el abismo marino." />
+  <meta name="twitter:image" content="./assets/sprites/intro_4_liam_emblema.png" />
+
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     body, html {
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #0b1a14;
+      background-color: #050e0a;
       display: flex;
       justify-content: center;
       align-items: center;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: none;
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
     }
     #game-container {
       width: 100%;
@@ -27,11 +47,19 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      position: relative;
+    }
+    canvas {
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      object-fit: contain !important;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
     }
   </style>
 </head>
 <body>
   <div id="game-container"></div>
-  <script type="module" src="/src/main.ts"></script>
+  <script type="module" src="./src/main.ts"></script>
 </body>
 </html>
