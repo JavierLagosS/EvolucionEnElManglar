@@ -44,9 +44,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     // Ocultar el sprite base: el renderizado visual lo hace visualSprite
     this.setVisible(false);
 
+    // Anclaje inferior/central (0.5 horizontal, 1.0 vertical) para que los pies toquen exactamente el suelo
+    this.setOrigin(0.5, 1.0);
+
     // Sprite visual desacoplado que replica la posición pero puede deformarse sin alterar la física
     this.visualSprite = scene.add.sprite(x, y, 'player_mushroom');
-    this.visualSprite.setOrigin(0.5, 0.5);
+    this.visualSprite.setOrigin(0.5, 1.0);
 
     // Inicializar FSM evolutiva
     this.stateMachine = new PlayerStateMachine(this);
@@ -150,6 +153,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   }
 
   public setVisualTexture(textureKey: string): void {
+    this.setTexture(textureKey);
     this.visualSprite.setTexture(textureKey);
 
     // Ajustar dimensiones óptimas de renderizado según el sprite
@@ -180,6 +184,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     this.baseScaleX = Math.abs(this.visualSprite.scaleX);
     this.baseScaleY = Math.abs(this.visualSprite.scaleY);
     this.setFacingDirection(this._facingDirection);
+  }
+
+  public get visualCenter(): { x: number; y: number } {
+    return {
+      x: this.x,
+      y: this.y - this.visualSprite.displayHeight / 2
+    };
+  }
+
+  public get visualRadius(): number {
+    return Math.max(this.visualSprite.displayWidth, this.visualSprite.displayHeight) / 2;
   }
 
   public updateVisualTexture(textureKey: string): void {

@@ -49,6 +49,14 @@ export abstract class BaseFood extends Phaser.GameObjects.Container implements I
     return this._isActive;
   }
 
+  public get visualCenter(): { x: number; y: number } {
+    return { x: this.x, y: this.y };
+  }
+
+  public get visualRadius(): number {
+    return Math.max(this.visualSprite.displayWidth, this.visualSprite.displayHeight) / 2;
+  }
+
   /**
    * Configura micro-animaciones (vibración de alas, aleteo elástico).
    */

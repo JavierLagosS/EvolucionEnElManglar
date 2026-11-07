@@ -11,7 +11,7 @@ export class FlyFood extends BaseFood {
   public readonly nutritionalValue = 25;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'food_fly', 14);
+    super(scene, x, y, 'food_fly', 18);
     this.visualSprite.setDisplaySize(34, 30);
     this.looksLeftOriginally = false; // avispa.png mira a la derecha
     this.floatSpeed = 0.005;
@@ -35,7 +35,7 @@ export class FishFood extends BaseFood {
     const chosen = variants[FishFood.variantCounter % variants.length];
     FishFood.variantCounter++;
 
-    super(scene, x, y, chosen, 15);
+    super(scene, x, y, chosen, 20);
     this.visualSprite.setDisplaySize(36, 34);
 
     // pez_naranja y pez_celeste miran a la izquierda; pez_rosa mira a la derecha
@@ -56,7 +56,7 @@ export class BigFlyFood extends BaseFood {
   public readonly nutritionalValue = 25;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'food_big_fly', 18);
+    super(scene, x, y, 'food_big_fly', 22);
     this.visualSprite.setDisplaySize(42, 36);
     this.looksLeftOriginally = false;
     this.floatSpeed = 0.0035;
@@ -74,7 +74,7 @@ export class WaspFood extends BaseFood {
   public readonly nutritionalValue = 18;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'food_wasp', 16);
+    super(scene, x, y, 'food_wasp', 24);
     this.visualSprite.setDisplaySize(46, 40);
     this.looksLeftOriginally = false;
     this.floatSpeed = 0.0045;

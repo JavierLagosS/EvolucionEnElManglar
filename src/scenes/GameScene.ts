@@ -190,11 +190,43 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Overlap jugador vs presas de comida (con jerarquía trófica en Nivel 2)
+    // Overlap jugador vs presas de comida (con jerarquía trófica y margen generoso del 20%)
     this.physics.add.overlap(this.player, this.foodGroup, (_p, foodObj) => {
       const food = foodObj as unknown as BaseFood;
       if (!food || !food.isActive) return;
+      this.collectFoodIfInRange(food);
+    });
 
+    // Overlap jugador vs depredadores patrullando en Nivel 2 y 3
+    this.physics.add.overlap(this.player, this.predatorGroup, (_p, predObj) => {
+      if (this.currentLevel === 2 || this.currentLevel === 3) {
+        this.handleTrophicDamage(predObj as Phaser.GameObjects.GameObject);
+      }
+    });
+  }
+
+  /**
+   * Recolección de presas con cálculo de distancia entre centros visuales
+   * y margen generoso del 20% para que nunca falle cuando el sprite toca la presa.
+   */
+  public collectFoodIfInRange(food: BaseFood): boolean {
+    if (!food || !food.isActive || this.isInputFrozen) return false;
+
+    const playerCenter = this.player.visualCenter;
+    const playerRadius = this.player.visualRadius;
+    const foodCenter = food.visualCenter;
+    const preyRadius = food.visualRadius;
+
+    // Distancia euclidiana entre centros visuales de ambos sprites con margen del 20%
+    const maxDistance = (playerRadius + preyRadius) * 1.2;
+    const dist = Phaser.Math.Distance.Between(
+      playerCenter.x,
+      playerCenter.y,
+      foodCenter.x,
+      foodCenter.y
+    );
+
+    if (dist <= maxDistance) {
       if (this.currentLevel === 2 || this.currentLevel === 3) {
         const playerRank = this.getPlayerPhaseRank();
         const foodRank = this.getFoodRequiredPhase(food.type);
@@ -202,7 +234,7 @@ export class GameScene extends Phaser.Scene {
         if (foodRank > playerRank) {
           // Criatura de estrato superior: ataca al jugador
           this.handleTrophicDamage(food as unknown as Phaser.GameObjects.GameObject);
-          return;
+          return false;
         }
       }
 
@@ -214,14 +246,21 @@ export class GameScene extends Phaser.Scene {
         this.totalPreyEaten++;
         this.soundSystem.playEat();
         this.particleSystem.emitEatParticles(foodX, foodY, foodType);
+        return true;
       }
-    });
+    }
+    return false;
+  }
 
-    // Overlap jugador vs depredadores patrullando en Nivel 2 y 3
-    this.physics.add.overlap(this.player, this.predatorGroup, (_p, predObj) => {
-      if (this.currentLevel === 2 || this.currentLevel === 3) {
-        this.handleTrophicDamage(predObj as Phaser.GameObjects.GameObject);
+  public checkFoodCollisions(): void {
+    if (this.isInputFrozen) return;
+
+    this.foodGroup.children.iterate((child) => {
+      const food = child as unknown as BaseFood;
+      if (food && food.isActive) {
+        this.collectFoodIfInRange(food);
       }
+      return null;
     });
   }
 
@@ -1659,6 +1698,9 @@ export class GameScene extends Phaser.Scene {
     // 5. Actualizar al jugador y su FSM
     this.player.handleInput(inputState, delta);
     this.player.update(time, delta);
+
+    // Detección generosa de colisión con presas basada en distancia entre centros visuales (+20%)
+    this.checkFoodCollisions();
 
     // 6. Actualizar al Jefe Final si está activo
     if (this.boss && this.bossFightActive) {
