@@ -75,10 +75,10 @@ export class CoronationCinematic {
 
     // Precargar imágenes de los reyes del manglar
     this.dragonflyImg = new Image();
-    this.dragonflyImg.src = '/assets/sprites/libelula.png';
+    this.dragonflyImg.src = './assets/sprites/libelula.png';
 
     this.sharkImg = new Image();
-    this.sharkImg.src = '/assets/sprites/tiburon.png';
+    this.sharkImg.src = './assets/sprites/tiburon.png';
 
     // Crear overlay de Canvas
     this.canvas = document.createElement('canvas');
@@ -804,7 +804,7 @@ export class CoronationCinematic {
     // Subtítulo de transición de la escena
     ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
     ctx.font = 'italic 13px sans-serif';
-    ctx.fillText('Ecosistema Conquistado: Reyes del Manglar y del Abismo', 640, 94);
+    ctx.fillText('Ecosistema Conquistado: Reyes del Manglar y del Abismo • Liam & Papá Studios', 640, 94);
 
     ctx.restore();
   }
@@ -900,12 +900,14 @@ export class CoronationCinematic {
       ctx.fillText(line, boxX + 38, boxY + 95 + idx * 30);
     });
 
-    // Créditos
+    // Créditos Oficiales de Liam & Papá Studios
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#95d5b2';
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillText('🌟 Creado e inspirado por Liam • Liam & Papá Studios 🌟', 640, boxY + 338);
+    ctx.fillStyle = '#d8f3dc';
     ctx.font = 'italic 13px sans-serif';
-    ctx.fillText('Desarrollado para: "Evolución en el Manglar"', 640, boxY + 340);
-    ctx.fillText('Diseño de Ecosistemas y Programación: Antigravity AI Engine', 640, boxY + 362);
+    ctx.fillText('Dirección Creativa: Liam • Desarrollado junto a Papá (Noviembre 2026)', 640, boxY + 362);
 
     // Botón de Cerrar Modal
     const cb = this.btnCloseStats;

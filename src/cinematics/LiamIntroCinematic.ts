@@ -125,10 +125,10 @@ export class LiamIntroCinematic {
 
   private loadImages(): void {
     const urls = [
-      '/assets/sprites/intro_1_tierra.png',
-      '/assets/sprites/intro_2_lluvia.png',
-      '/assets/sprites/intro_3_manglar.png',
-      '/assets/sprites/intro_4_liam_emblema.png'
+      './assets/sprites/intro_1_tierra.png',
+      './assets/sprites/intro_2_lluvia.png',
+      './assets/sprites/intro_3_manglar.png',
+      './assets/sprites/intro_4_liam_emblema.png'
     ];
 
     let loadedCount = 0;
@@ -245,6 +245,22 @@ export class LiamIntroCinematic {
         alpha: 0.3 + Math.random() * 0.7,
         color: '#ffffff',
         type: 'star',
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    // 30 Chispas de lava tiernas (para Escena 1)
+    const emberColors = ['#ff4d6d', '#ff758f', '#ff9e00', '#ffd166'];
+    for (let i = 0; i < 30; i++) {
+      this.particles.push({
+        x: 600 + (Math.random() - 0.5) * 380,
+        y: 280 + Math.random() * 180,
+        vx: (Math.random() - 0.5) * 1.2,
+        vy: -(0.8 + Math.random() * 1.6),
+        size: 2 + Math.random() * 3.5,
+        alpha: 0.5 + Math.random() * 0.5,
+        color: emberColors[Math.floor(Math.random() * emberColors.length)],
+        type: 'ember',
         phase: Math.random() * Math.PI * 2
       });
     }
@@ -408,12 +424,28 @@ export class LiamIntroCinematic {
     const ctx = this.ctx;
 
     for (const p of this.particles) {
-      if (sceneIdx === 0 && p.type === 'star') {
-        const twinkle = p.alpha * (0.6 + Math.sin(timestamp * 0.003 + p.phase) * 0.4);
-        ctx.fillStyle = `rgba(255, 255, 255, ${twinkle})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+      if (sceneIdx === 0 && (p.type === 'star' || p.type === 'ember')) {
+        if (p.type === 'star') {
+          const twinkle = p.alpha * (0.6 + Math.sin(timestamp * 0.003 + p.phase) * 0.4);
+          ctx.fillStyle = `rgba(255, 255, 255, ${twinkle})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.alpha * (0.7 + Math.sin(timestamp * 0.005 + p.phase) * 0.3);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.y < 160 || p.alpha <= 0.05) {
+            p.y = 350 + Math.random() * 100;
+            p.x = 600 + (Math.random() - 0.5) * 380;
+          }
+        }
       } else if (sceneIdx === 1 && (p.type === 'rain' || p.type === 'bubble')) {
         if (p.type === 'rain') {
           ctx.strokeStyle = `rgba(144, 224, 239, ${p.alpha})`;
@@ -526,23 +558,29 @@ export class LiamIntroCinematic {
       const bounceY = Math.sin(timestamp * 0.003) * 3;
       const titleY = 100 + bounceY;
 
-      // Sombra exterior
-      ctx.font = 'bold 36px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#05030c';
-      ctx.fillText('🌟 CREADO E INSPIRADO POR LIAM 🌟', 642, titleY + 3);
+      // Línea 1: Sello de Estudio (Liam & Papá Studios)
+      ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
+      ctx.strokeStyle = '#071626';
+      ctx.lineWidth = 5;
+      ctx.strokeText('🎮 LIAM & PAPÁ STUDIOS PRESENTA 🎮', 640, titleY - 26);
+      ctx.fillStyle = '#ffe66d';
+      ctx.fillText('🎮 LIAM & PAPÁ STUDIOS PRESENTA 🎮', 640, titleY - 26);
 
-      // Trazo grueso estilo Kirby
+      // Línea 2: Creado e inspirado por Liam
+      ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#05030c';
+      ctx.fillText('🌟 CREADO E INSPIRADO POR LIAM 🌟', 642, titleY + 14);
+
       ctx.strokeStyle = '#071626';
       ctx.lineWidth = 7;
-      ctx.strokeText('🌟 CREADO E INSPIRADO POR LIAM 🌟', 640, titleY);
+      ctx.strokeText('🌟 CREADO E INSPIRADO POR LIAM 🌟', 640, titleY + 11);
 
-      // Relleno degradado dorado vibrante
-      const textGrad = ctx.createLinearGradient(0, titleY - 20, 0, titleY + 10);
+      const textGrad = ctx.createLinearGradient(0, titleY - 10, 0, titleY + 25);
       textGrad.addColorStop(0, '#fff3b0');
       textGrad.addColorStop(0.5, '#ffd166');
       textGrad.addColorStop(1, '#f77f00');
       ctx.fillStyle = textGrad;
-      ctx.fillText('🌟 CREADO E INSPIRADO POR LIAM 🌟', 640, titleY);
+      ctx.fillText('🌟 CREADO E INSPIRADO POR LIAM 🌟', 640, titleY + 11);
 
       ctx.globalAlpha = 1;
     }
@@ -590,7 +628,7 @@ export class LiamIntroCinematic {
     // ==========================================
     if (sceneIdx === 3) {
       // Título Principal "EVOLUCIÓN EN EL MANGLAR"
-      const mainTitleY = 88;
+      const mainTitleY = 74;
       ctx.font = '900 46px "Segoe UI", Arial, sans-serif';
 
       ctx.strokeStyle = '#03141f';
@@ -604,15 +642,23 @@ export class LiamIntroCinematic {
       ctx.fillStyle = titleGrad;
       ctx.fillText('EVOLUCIÓN EN EL MANGLAR', 640, mainTitleY);
 
-      // Subtítulo con dedicatoria a Liam
-      const subTitleY = 136;
-      ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
+      // Crédito estelar: Dirección Creativa y Diseño de Criaturas: LIAM
+      const subTitleY = 114;
+      ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
       ctx.strokeStyle = '#051923';
       ctx.lineWidth = 5;
-      ctx.strokeText('🌟 Una idea original creada e inspirada por Liam 🌟', 640, subTitleY);
+      ctx.strokeText('🌟 Dirección Creativa y Diseño de Criaturas: LIAM 🌟', 640, subTitleY);
+      ctx.fillStyle = '#ffd166';
+      ctx.fillText('🌟 Dirección Creativa y Diseño de Criaturas: LIAM 🌟', 640, subTitleY);
 
-      ctx.fillStyle = '#48cae4';
-      ctx.fillText('🌟 Una idea original creada e inspirada por Liam 🌟', 640, subTitleY);
+      // Pie de firma: Desarrollado junto a Papá • Noviembre 2026
+      const firmY = 142;
+      ctx.font = 'italic 600 16px "Segoe UI", Arial, sans-serif';
+      ctx.strokeStyle = '#051923';
+      ctx.lineWidth = 4;
+      ctx.strokeText('Desarrollado junto a Papá • Noviembre 2026', 640, firmY);
+      ctx.fillStyle = '#b7e4c7';
+      ctx.fillText('Desarrollado junto a Papá • Noviembre 2026', 640, firmY);
     }
 
     ctx.restore();
