@@ -33,17 +33,19 @@ export class BossKingfisher extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, x: number = 640, y: number = 300) {
     super(scene, x, y);
     this.visualSprite = scene.add.sprite(0, 0, 'boss_kingfisher');
+    this.visualSprite.setDisplaySize(116, 90);
     this.add(this.visualSprite);
 
     scene.add.existing(this);
     scene.physics.world.enable(this);
     this.body.setAllowGravity(false);
-    this.body.setSize(90, 50);
-    this.body.setOffset(-45, -25);
+    this.body.setSize(100, 56);
+    this.body.setOffset(-50, -28);
     this.body.setCollideWorldBounds(true);
     this.setDepth(300);
 
     this.body.setVelocityX(this.patrolSpeed);
+    this.visualSprite.setFlipX(true); // martin_pescador.png mira a la izquierda originalmente, hacia la derecha se voltea
   }
 
   public isInvulnerable(): boolean {
@@ -125,10 +127,10 @@ export class BossKingfisher extends Phaser.GameObjects.Container {
     // Rebotes contra límites horizontales
     if (this.x <= minX && this.body.velocity.x < 0) {
       this.body.setVelocityX(Math.abs(this.patrolSpeed));
-      this.visualSprite.setFlipX(false);
+      this.visualSprite.setFlipX(true);
     } else if (this.x >= maxX && this.body.velocity.x > 0) {
       this.body.setVelocityX(-Math.abs(this.patrolSpeed));
-      this.visualSprite.setFlipX(true);
+      this.visualSprite.setFlipX(false);
     }
 
     // 2. MÁQUINA DE ESTADOS DEL JEFE
@@ -139,10 +141,10 @@ export class BossKingfisher extends Phaser.GameObjects.Container {
         // Patrullaje horizontal en el dosel aéreo
         if (this.x <= this.patrolMinX && this.body.velocity.x < 0) {
           this.body.setVelocityX(this.patrolSpeed);
-          this.visualSprite.setFlipX(false);
+          this.visualSprite.setFlipX(true);
         } else if (this.x >= this.patrolMaxX && this.body.velocity.x > 0) {
           this.body.setVelocityX(-this.patrolSpeed);
-          this.visualSprite.setFlipX(true);
+          this.visualSprite.setFlipX(false);
         }
 
         // Suave oscilación de vuelo
@@ -179,7 +181,7 @@ export class BossKingfisher extends Phaser.GameObjects.Container {
                 const vx = Math.cos(angle) * diveSpeed;
                 const vy = Math.sin(angle) * diveSpeed;
                 this.body.setVelocity(vx, vy);
-                this.visualSprite.setFlipX(this.diveTarget.x < this.x);
+                this.visualSprite.setFlipX(this.diveTarget.x >= this.x);
               }
             }
           });
@@ -202,7 +204,7 @@ export class BossKingfisher extends Phaser.GameObjects.Container {
         if (dist < 80 || this.y >= this.diveTarget.y || this.y >= 1150 || this.stateTimer > 1400) {
           this.state = 'RECOVERING';
           this.stateTimer = 0;
-          const recoverVx = this.visualSprite.flipX ? -this.patrolSpeed : this.patrolSpeed;
+          const recoverVx = this.visualSprite.flipX ? this.patrolSpeed : -this.patrolSpeed;
           this.body.setVelocity(recoverVx, -340);
         }
         break;
@@ -218,7 +220,7 @@ export class BossKingfisher extends Phaser.GameObjects.Container {
           this.state = 'PATROL';
           this.stateTimer = 0;
           this.diveTimer = 0; // Reiniciar temporizador para ciclo completo de patrulla
-          this.body.setVelocity(this.visualSprite.flipX ? -this.patrolSpeed : this.patrolSpeed, 0);
+          this.body.setVelocity(this.visualSprite.flipX ? this.patrolSpeed : -this.patrolSpeed, 0);
         }
 
         // Failsafe: si después de 2000ms sigue en recovering, forzar regreso a patrulla en y = 300
@@ -227,7 +229,7 @@ export class BossKingfisher extends Phaser.GameObjects.Container {
           this.state = 'PATROL';
           this.stateTimer = 0;
           this.diveTimer = 0;
-          this.body.setVelocity(this.visualSprite.flipX ? -this.patrolSpeed : this.patrolSpeed, 0);
+          this.body.setVelocity(this.visualSprite.flipX ? this.patrolSpeed : -this.patrolSpeed, 0);
         }
         break;
       }

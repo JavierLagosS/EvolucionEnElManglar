@@ -23,6 +23,7 @@ export abstract class BaseFood extends Phaser.GameObjects.Container implements I
   public floatSpeed: number = 0.003;
   public floatAmplitudeY: number = 6;
   public floatAmplitudeX: number = 3;
+  public looksLeftOriginally: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, textureKey: string, hitboxRadius: number = 14) {
     super(scene, x, y);
@@ -48,16 +49,24 @@ export abstract class BaseFood extends Phaser.GameObjects.Container implements I
     return this._isActive;
   }
 
+  public get visualCenter(): { x: number; y: number } {
+    return { x: this.x, y: this.y };
+  }
+
+  public get visualRadius(): number {
+    return Math.max(this.visualSprite.displayWidth, this.visualSprite.displayHeight) / 2;
+  }
+
   /**
    * Configura micro-animaciones (vibración de alas, aleteo elástico).
    */
   protected initBehavior(): void {
-    // Aleteo / vibración elástica continua
+    // Aleteo / vibración elástica continua en el contenedor
     this.scene.tweens.add({
-      targets: this.visualSprite,
-      scaleY: 0.88,
+      targets: this,
+      scaleY: 0.92,
       scaleX: 1.08,
-      duration: 120 + Math.random() * 60,
+      duration: 140 + Math.random() * 60,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
@@ -75,6 +84,14 @@ export abstract class BaseFood extends Phaser.GameObjects.Container implements I
     const offsetX = Math.cos(t * 0.7) * this.floatAmplitudeX;
 
     this.setPosition(this.baseX + offsetX, this.baseY + offsetY);
+
+    // Orientación automática según dirección horizontal de avance
+    const vx = -Math.sin(t * 0.7);
+    if (this.looksLeftOriginally) {
+      this.visualSprite.setFlipX(vx > 0);
+    } else {
+      this.visualSprite.setFlipX(vx < 0);
+    }
   }
 
   /**

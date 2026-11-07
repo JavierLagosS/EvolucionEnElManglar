@@ -5,7 +5,8 @@ export enum EvolutionPhase {
   MUSHROOM = 'MUSHROOM',
   TADPOLE = 'TADPOLE',
   FROG = 'FROG',
-  DRAGONFLY = 'DRAGONFLY'
+  DRAGONFLY = 'DRAGONFLY',
+  SHARK = 'SHARK'
 }
 
 /**
