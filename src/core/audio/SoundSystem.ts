@@ -191,4 +191,161 @@ export class SoundSystem {
       // Audio seguro
     }
   }
+
+  /**
+   * Alerta grave de Jefe Final (playBossAlert): Sirena/pulso grave de advertencia en el dosel.
+   */
+  public playBossAlert(): void {
+    if (this.isMuted) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      // Dos pulsos graves oscilantes (120Hz -> 85Hz)
+      [0, 0.28].forEach((offset) => {
+        const t = now + offset;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(125, t);
+        osc.frequency.exponentialRampToValueAtTime(80, t + 0.25);
+
+        gain.gain.setValueAtTime(0.28, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(t);
+        osc.stop(t + 0.25);
+      });
+    } catch {
+      // Audio seguro
+    }
+  }
+
+  /**
+   * Golpe al Jefe Final (playBossHit): Impacto contundente con crujido.
+   */
+  public playBossHit(): void {
+    if (this.isMuted) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(65, now + 0.15);
+
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch {
+      // Audio seguro
+    }
+  }
+
+  /**
+   * Jefe derrotado (playBossDefeated): Acorde triunfal extendido y fanfarria mayor majestuosa.
+   */
+  public playBossDefeated(): void {
+    if (this.isMuted) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      // Arpegio triunfal C4 -> E4 -> G4 -> B4 -> C5 -> E5 -> G5
+      const notes = [261.63, 329.63, 392.00, 493.88, 523.25, 659.25, 783.99];
+      const now = ctx.currentTime;
+
+      notes.forEach((freq, idx) => {
+        const noteTime = now + idx * 0.14;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, noteTime);
+
+        gain.gain.setValueAtTime(0.22, noteTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.45);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(noteTime);
+        osc.stop(noteTime + 0.45);
+      });
+    } catch {
+      // Audio seguro
+    }
+  }
+
+  /**
+   * Cierre de la trilogía de niveles (playTrilogyEnding):
+   * Tema y acorde prolongado de arpegio triunfal usando ondas sine y triangle
+   * que celebra la coronación final del ecosistema tras vencer al Calamar Gigante.
+   */
+  public playTrilogyEnding(): void {
+    if (this.isMuted) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      // Arpegio orquestal triunfal majestuoso en sine + triangle
+      const notes = [
+        { f: 130.81, t: 0.0, d: 2.5 },   // C3 (Fundamento)
+        { f: 196.00, t: 0.18, d: 2.5 },  // G3
+        { f: 261.63, t: 0.36, d: 2.8 },  // C4
+        { f: 329.63, t: 0.54, d: 2.8 },  // E4
+        { f: 392.00, t: 0.72, d: 3.0 },  // G4
+        { f: 493.88, t: 0.90, d: 3.0 },  // B4
+        { f: 523.25, t: 1.08, d: 3.4 },  // C5
+        { f: 659.25, t: 1.26, d: 3.4 },  // E5
+        { f: 783.99, t: 1.44, d: 3.8 },  // G5
+        { f: 1046.50, t: 1.62, d: 4.2 }  // C6 (Clímax de Coronación)
+      ];
+
+      notes.forEach((note) => {
+        const start = now + note.t;
+
+        // Capa Triangle: cuerpo, resonancia y definición melódica
+        const oscTri = ctx.createOscillator();
+        const gainTri = ctx.createGain();
+        oscTri.type = 'triangle';
+        oscTri.frequency.setValueAtTime(note.f, start);
+        gainTri.gain.setValueAtTime(0.18, start);
+        gainTri.gain.exponentialRampToValueAtTime(0.0001, start + note.d);
+        oscTri.connect(gainTri);
+        gainTri.connect(ctx.destination);
+        oscTri.start(start);
+        oscTri.stop(start + note.d);
+
+        // Capa Sine: calidez sedosa, brillantez pura y sostenimiento extendido
+        const oscSine = ctx.createOscillator();
+        const gainSine = ctx.createGain();
+        oscSine.type = 'sine';
+        oscSine.frequency.setValueAtTime(note.f * 1.002, start); // Micro-chorus
+        gainSine.gain.setValueAtTime(0.14, start);
+        gainSine.gain.exponentialRampToValueAtTime(0.0001, start + note.d);
+        oscSine.connect(gainSine);
+        gainSine.connect(ctx.destination);
+        oscSine.start(start);
+        oscSine.stop(start + note.d);
+      });
+    } catch {
+      // Audio seguro
+    }
+  }
 }

@@ -145,4 +145,68 @@ export class ParticleSystem {
       });
     }
   }
+
+  /**
+   * Impacto sobre el Jefe Final: plumas y chispas doradas/celestes.
+   */
+  public emitBossHitParticles(x: number, y: number): void {
+    const count = 18;
+    const colors = [0x00b4d8, 0xffd166, 0xff6b35, 0xffffff, 0x00f5d4];
+
+    for (let i = 0; i < count; i++) {
+      const color = Phaser.Utils.Array.GetRandom(colors);
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const dist = Phaser.Math.Between(40, 130);
+      const radius = Phaser.Math.FloatBetween(3, 6);
+
+      const particle = this.scene.add.circle(x, y, radius, color, 1);
+      particle.setDepth(500);
+
+      this.scene.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist,
+        alpha: 0,
+        scaleX: 0.2,
+        scaleY: 0.2,
+        duration: 400,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          particle.destroy();
+        }
+      });
+    }
+  }
+
+  /**
+   * Derrota del Jefe Final: gran explosión radial de 50 partículas multicolores con destello.
+   */
+  public emitBossDefeatParticles(x: number, y: number): void {
+    const count = 50;
+    const palette = [0xffd166, 0xef476f, 0x06d6a0, 0x118ab2, 0xffbe0b, 0xffffff, 0x7209b7];
+
+    for (let i = 0; i < count; i++) {
+      const color = Phaser.Utils.Array.GetRandom(palette);
+      const angle = (i / count) * Math.PI * 2 + Phaser.Math.FloatBetween(-0.1, 0.1);
+      const distance = Phaser.Math.Between(120, 320);
+      const radius = Phaser.Math.FloatBetween(4, 9);
+
+      const spark = this.scene.add.circle(x, y, radius, color, 1);
+      spark.setDepth(600);
+
+      this.scene.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        scaleX: 0.1,
+        scaleY: 0.1,
+        duration: Phaser.Math.Between(600, 950),
+        ease: 'Cubic.easeOut',
+        onComplete: () => {
+          spark.destroy();
+        }
+      });
+    }
+  }
 }

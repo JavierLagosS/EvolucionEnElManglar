@@ -27,6 +27,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   private groundedGraceTimer: number = 0;
   private invulnerableTimer: number = 0;
 
+  // Estado de impulso / embestida activa
+  public isDashing: boolean = false;
+
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // Inicializar el cuerpo físico nativo en Arcade
     super(scene, x, y, 'player_mushroom');
@@ -59,9 +62,40 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     return (
       this.groundedGraceTimer > 0 ||
       this.body.blocked.down ||
-      this.body.touching.down ||
-      this.body.wasTouching.down
+      this.body.touching.down
     );
+  }
+
+  public markGrounded(coyoteTimeMs: number = 140): void {
+    this.groundedGraceTimer = coyoteTimeMs;
+  }
+
+  // --- Configuración Dinámica de Físicas Arcade ---
+
+  public applyPhysicsConfig(config: PhasePhysicsConfig): void {
+    this.body.setAllowGravity(config.allowGravity);
+    this.body.setGravityY(config.gravityY);
+    this.body.setDrag(config.dragX, config.dragY);
+    this.body.setMaxVelocity(config.maxVelocityX, config.maxVelocityY);
+    this.body.setBounce(config.bounceX, config.bounceY);
+
+    // Hitbox física desacoplada de la textura
+    this.body.setSize(config.hitboxWidth, config.hitboxHeight);
+    this.body.setOffset(
+      (this.width - config.hitboxWidth) / 2,
+      this.height - config.hitboxHeight
+    );
+  }
+
+  public applyImpulse(vx: number, vy: number): void {
+    this.body.velocity.x += vx;
+    this.body.velocity.y += vy;
+  }
+
+  // --- Delegación a FSM ---
+
+  public get currentPhase(): EvolutionPhase {
+    return this.stateMachine.getCurrentPhase() ?? EvolutionPhase.MUSHROOM;
   }
 
   public get isInWater(): boolean {
@@ -72,80 +106,45 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     return this._facingDirection;
   }
 
-  public markGrounded(graceMs: number = 160): void {
-    this.groundedGraceTimer = graceMs;
+  public setFacingDirection(dir: 1 | -1): void {
+    this._facingDirection = dir;
+    this.visualSprite.setFlipX(dir === -1);
   }
 
   public getStateMachine(): PlayerStateMachine {
     return this.stateMachine;
   }
 
-  // --- Métodos de Control Físico ---
+  // --- Animación Procedural y Feedback Visual ---
 
-  public applyImpulse(vx: number, vy: number): void {
-    this.setVelocity(this.body.velocity.x + vx, this.body.velocity.y + vy);
-  }
-
-  public override setVelocity(vx: number, vy: number): this {
-    return super.setVelocity(vx, vy);
-  }
-
-  public override setVelocityX(vx: number): this {
-    return super.setVelocityX(vx);
-  }
-
-  public override setVelocityY(vy: number): this {
-    return super.setVelocityY(vy);
-  }
-
-  public setFacingDirection(direction: 1 | -1): void {
-    this._facingDirection = direction;
-    this.visualSprite.setFlipX(direction === -1);
-  }
-
-  public applyPhysicsConfig(config: PhasePhysicsConfig): void {
-    this.body.setAllowGravity(config.allowGravity);
-    this.body.setGravityY(config.gravityY);
-    this.body.setDrag(config.dragX, config.dragY);
-    this.body.setMaxVelocity(config.maxVelocityX, config.maxVelocityY);
-    this.body.setBounce(config.bounceX, config.bounceY);
-
-    // Hitbox física fija matemática (nunca se deforma con tweens)
-    this.body.setSize(config.hitboxWidth, config.hitboxHeight);
-  }
-
-  // --- Game Feel & Efectos Visuales (Desacoplados de la Hitbox) ---
-
-  public triggerSquashAndStretch(scaleX: number, scaleY: number, durationMs: number = 150): void {
+  public triggerSquashAndStretch(scaleX: number, scaleY: number, duration: number = 180): void {
     if (this.squashTween) {
       this.squashTween.stop();
     }
-
     this.visualSprite.setScale(scaleX, scaleY);
-
     this.squashTween = this.scene.tweens.add({
       targets: this.visualSprite,
       scaleX: 1,
       scaleY: 1,
-      duration: durationMs,
+      duration: duration,
       ease: 'Back.easeOut',
-      easeParams: [2.5]
+      easeParams: [2.5],
+      onComplete: () => {
+        this.squashTween = null;
+      }
     });
   }
 
   public setVisualTexture(textureKey: string): void {
-    if (this.scene.textures.exists(textureKey)) {
-      this.visualSprite.setTexture(textureKey);
-      this.visualSprite.clearTint();
-    }
+    this.visualSprite.setTexture(textureKey);
   }
 
-  public setVisualTint(tint: number): void {
-    if (tint !== 0xffffff && tint !== 0) {
-      this.visualSprite.setTint(tint);
-    } else {
-      this.visualSprite.clearTint();
-    }
+  public updateVisualTexture(textureKey: string): void {
+    this.visualSprite.setTexture(textureKey);
+  }
+
+  public setVisualTint(color: number): void {
+    this.visualSprite.setTint(color);
   }
 
   public clearVisualTint(): void {
@@ -154,6 +153,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
 
   public isInvulnerable(): boolean {
     return this.invulnerableTimer > 0;
+  }
+
+  /**
+   * Inicia un estado de embestida activa (usado por la Libélula).
+   */
+  public startDash(durationMs: number = 380): void {
+    this.isDashing = true;
+    this.invulnerableTimer = Math.ceil(durationMs / 16.666);
+    this.scene.time.delayedCall(durationMs, () => {
+      this.isDashing = false;
+    });
   }
 
   public takeDamage(fromX: number, _fromY: number): void {

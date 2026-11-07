@@ -349,6 +349,149 @@ export class BootScene extends Phaser.Scene {
     gfx.fillCircle(32, 36, 5);
     gfx.generateTexture('hunter_frog', 64, 50);
 
+    // ==========================================
+    // 8. JEFE FINAL: MARTÍN PESCADOR GIGANTE (96 x 64)
+    // ==========================================
+    gfx.clear();
+    gfx.lineStyle(3.5, 0x031926, 1);
+
+    // Cola con plumas azul marino
+    gfx.fillStyle(0x003566, 1);
+    gfx.fillTriangle(20, 36, 4, 30, 4, 44);
+    gfx.strokeTriangle(20, 36, 4, 30, 4, 44);
+
+    // Vientre naranja intenso
+    gfx.fillStyle(0xf77f00, 1);
+    gfx.fillEllipse(44, 38, 30, 18);
+    gfx.strokeEllipse(44, 38, 30, 18);
+
+    // Cuerpo azul rey
+    gfx.fillStyle(0x0077b6, 1);
+    gfx.fillEllipse(42, 30, 32, 16);
+    gfx.strokeEllipse(42, 30, 32, 16);
+
+    // Ala cian con plumas superpuestas
+    gfx.fillStyle(0x48cae4, 1);
+    gfx.beginPath();
+    gfx.moveTo(30, 24);
+    gfx.lineTo(58, 26);
+    gfx.lineTo(44, 44);
+    gfx.lineTo(24, 38);
+    gfx.closePath();
+    gfx.fill();
+    gfx.stroke();
+
+    // Cabeza con cresta azul oscura
+    gfx.fillStyle(0x023e8a, 1);
+    gfx.fillCircle(62, 22, 18);
+    gfx.strokeCircle(62, 22, 18);
+
+    // Cresta superior de plumas
+    gfx.fillTriangle(52, 6, 62, 2, 58, 12);
+    gfx.fillTriangle(60, 4, 70, 4, 66, 12);
+
+    // Gran pico naranja daga afilado hacia adelante
+    gfx.fillStyle(0xf77f00, 1);
+    gfx.beginPath();
+    gfx.moveTo(76, 18);
+    gfx.lineTo(95, 26);
+    gfx.lineTo(74, 32);
+    gfx.closePath();
+    gfx.fill();
+    gfx.stroke();
+
+    // Ojo feroz con resplandor dorado
+    gfx.fillStyle(0xffea00, 1);
+    gfx.fillCircle(66, 20, 6.5);
+    gfx.strokeCircle(66, 20, 6.5);
+    gfx.fillStyle(0xd90429, 1);
+    gfx.fillCircle(67, 20, 3.5);
+    gfx.fillStyle(0xffffff, 1);
+    gfx.fillCircle(66, 18, 1.8);
+
+    gfx.generateTexture('boss_kingfisher', 96, 64);
+
+    // ==========================================
+    // 9. JEFE FINAL (NIVEL 3): CALAMAR GIGANTE DEL ABISMO (110 x 70)
+    // ==========================================
+    gfx.clear();
+    gfx.lineStyle(3.5, 0x16001e, 1);
+
+    // Aletas caudales del manto (forma de flecha posterior)
+    gfx.fillStyle(0x7209b7, 1);
+    gfx.fillTriangle(22, 35, 2, 18, 2, 52);
+    gfx.strokeTriangle(22, 35, 2, 18, 2, 52);
+
+    // Manto hidrodinámico alargado (púrpura abisal y carmesí)
+    gfx.fillStyle(0x560bad, 1);
+    gfx.fillEllipse(42, 35, 36, 22);
+    gfx.strokeEllipse(42, 35, 36, 22);
+
+    // Patrón bioluminiscente en el manto (cian eléctrico)
+    gfx.fillStyle(0x4cc9f0, 0.9);
+    gfx.fillCircle(28, 30, 3);
+    gfx.fillCircle(38, 24, 3.5);
+    gfx.fillCircle(48, 28, 3);
+    gfx.fillCircle(36, 44, 3);
+    gfx.fillCircle(48, 42, 3.5);
+
+    // Cabeza del cefalópodo
+    gfx.fillStyle(0x3a0ca3, 1);
+    gfx.fillCircle(64, 35, 18);
+    gfx.strokeCircle(64, 35, 18);
+
+    // Tentáculos principales y brazos extendidos hacia adelante
+    gfx.fillStyle(0xb5179e, 1);
+    // Brazo superior
+    gfx.beginPath();
+    gfx.moveTo(76, 26);
+    gfx.lineTo(104, 16);
+    gfx.lineTo(98, 24);
+    gfx.lineTo(76, 31);
+    gfx.closePath();
+    gfx.fill();
+    gfx.stroke();
+
+    // Brazo medio/tentáculo largo depredador
+    gfx.beginPath();
+    gfx.moveTo(78, 34);
+    gfx.lineTo(108, 35);
+    gfx.lineTo(104, 39);
+    gfx.lineTo(78, 38);
+    gfx.closePath();
+    gfx.fill();
+    gfx.stroke();
+
+    // Brazo inferior
+    gfx.beginPath();
+    gfx.moveTo(76, 40);
+    gfx.lineTo(102, 52);
+    gfx.lineTo(96, 45);
+    gfx.lineTo(76, 43);
+    gfx.closePath();
+    gfx.fill();
+    gfx.stroke();
+
+    // Ventosas bioluminiscentes
+    gfx.fillStyle(0x4cc9f0, 0.95);
+    gfx.fillCircle(88, 20, 2);
+    gfx.fillCircle(98, 18, 2);
+    gfx.fillCircle(92, 36, 2.2);
+    gfx.fillCircle(102, 36, 2.2);
+    gfx.fillCircle(88, 48, 2);
+    gfx.fillCircle(96, 50, 2);
+
+    // Gran ojo abisal hipnótico con resplandor dorado y pupila carmesí
+    gfx.fillStyle(0xffea00, 1);
+    gfx.fillCircle(66, 32, 7.5);
+    gfx.strokeCircle(66, 32, 7.5);
+    gfx.fillStyle(0xd90429, 1);
+    gfx.fillCircle(67, 32, 4.2);
+    gfx.fillStyle(0xffffff, 1);
+    gfx.fillCircle(65, 30, 2.2);
+
+    gfx.generateTexture('boss_squid', 110, 70);
+
     gfx.destroy();
   }
 }
